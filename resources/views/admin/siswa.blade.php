@@ -104,9 +104,16 @@ async function loadSiswa(page = 1) {
   const q      = document.getElementById('search').value;
   const status = document.getElementById('filter-status').value;
   const res    = await api.get('/students', { search: q, status, page, per_page: 15 });
-  const rows   = res.data ?? [];
-  const meta   = res.pagination;
+  debugLog(`[DEBUG] loadSiswa response status: ${res?.status}`);
+  debugLog(`[DEBUG] loadSiswa response data type: ${typeof res?.data}`);
+  debugLog(`[DEBUG] loadSiswa response data keys: ${res?.data ? Object.keys(res.data).join(',') : 'null'}`);
+  // Response structure: { ok, status, data: { success, message, data: [...], pagination: {...} } }
+  const rows   = res.data?.data ?? [];
+  const meta   = res.data?.pagination;
   const tbody  = document.getElementById('siswa-tbody');
+  debugLog(`[DEBUG] Rows count after assignment: ${rows.length}`);
+  debugLog(`[DEBUG] Pagination object: ${meta ? 'present' : 'missing'}`);
+
 
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="material-icons">school</span><p>Tidak ada data siswa</p></div></td></tr>`;
@@ -117,11 +124,11 @@ async function loadSiswa(page = 1) {
   tbody.innerHTML = rows.map((s, i) => `
     <tr>
       <td>${(page-1)*15 + i + 1}</td>
-      <td><div style="font-weight:600">${s.name}</div></td>
-      <td style="color:var(--c-text-grey);font-size:12px">${s.email}</td>
-      <td>${s.student?.nis ?? '-'}</td>
-      <td style="font-size:12px">${s.student?.sekolah ?? '-'}</td>
-      <td>${statusBadge(s.student?.approval_status ?? s.status)}</td>
+      <td><div style="font-weight:600">${s.user?.name ?? 'N/A'}</div></td>
+      <td style="color:var(--c-text-grey);font-size:12px">${s.user?.email ?? 'N/A'}</td>
+      <td>${s.nis ?? '-'}</td>
+      <td style="font-size:12px">${s.sekolah ?? '-'}</td>
+      <td>${statusBadge(s.approval_status)}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           ${s.student?.approval_status === 'pending' ? `
@@ -208,6 +215,36 @@ async function deleteSiswa(id) {
   });
 }
 
-loadSiswa();
+try {
+  debugLog('[DEBUG] Calling loadSiswa()...');
+  loadSiswa();
+} catch (e) {
+  debugLog(`[ERROR] Error in loadSiswa: ${e.message}` );
+}
+
+// Create visual debug panel
+const debugPanel = document.createElement('div');
+debugPanel.id = 'debug-panel';
+debugPanel.style.cssText = 'position:fixed;bottom:10px;left:10px;background:#000;color:#0f0;padding:10px;font-family:monospace;font-size:11px;max-width:500px;max-height:250px;overflow-y:auto;z-index:9999;border:2px solid #0f0';
+document.body.appendChild(debugPanel);
+
+// Assign to global window so debugLog can update it
+window.debugPanel = debugPanel;
+
+// Show token info
+const tokenMeta = document.querySelector('meta[name="admin-token"]')?.content;
+const div1 = document.createElement('div');
+div1.textContent = `Token: ${tokenMeta ? tokenMeta.substring(0,25) + '...' : 'EMPTY'}`;
+debugPanel.appendChild(div1);
+
+const div2 = document.createElement('div');
+div2.textContent = `API: localhost:8000`;
+debugPanel.appendChild(div2);
+
+const div3 = document.createElement('div');
+div3.textContent = `---`;
+debugPanel.appendChild(div3);
+
+debugLog('[PAGE] siswa.blade.php loaded');
 </script>
 @endpush

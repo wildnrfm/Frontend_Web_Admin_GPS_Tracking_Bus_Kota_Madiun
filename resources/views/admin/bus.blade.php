@@ -103,8 +103,8 @@ async function loadBus(page = 1) {
   const q = document.getElementById('search').value;
   const status = document.getElementById('filter-status').value;
   const res = await api.get('/buses', { search: q, status, page, per_page: 15 });
-  const rows = res.data ?? [];
-  const meta = res.pagination;
+  const rows = res.data?.data ?? [];
+  const meta = res.data?.pagination;
   const tbody = document.getElementById('bus-tbody');
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">directions_bus</span><p>Tidak ada bus</p></div></td></tr>`;
@@ -141,7 +141,7 @@ async function editBus(id) {
   editId = id;
   document.getElementById('bus-modal-title').textContent = 'Edit Bus';
   const res = await api.get('/buses/' + id);
-  const b = res.data;
+  const b = res.data?.data;
   const f = document.getElementById('bus-form');
   f.kode_bus.value = b.kode_bus ?? '';
   f.plat_nomor.value = b.plat_nomor ?? '';

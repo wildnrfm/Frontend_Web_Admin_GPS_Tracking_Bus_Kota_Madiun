@@ -863,10 +863,10 @@ async function loadStats() {
     api.get('/admins'),
     api.get('/gps-tracks/dashboard').catch(() => ({ data: null })),
   ]);
-  const buses   = busRes.data ?? [];
-  const siswaTotal = stuRes.data?.pagination?.total ?? (stuRes.data?.length ?? 0);
-  const drivers = drvRes.data ?? [];
-  const admins  = admRes.data ?? [];
+  const buses   = busRes.data?.data ?? [];
+  const siswaTotal = stuRes.data?.pagination?.total ?? (stuRes.data?.data?.length ?? 0);
+  const drivers = drvRes.data?.data ?? [];
+  const admins  = admRes.data?.data ?? [];
   
   // Handle GPS data - ensure it's always an array
   let gpsOn = 0;
@@ -1091,7 +1091,7 @@ async function loadActivityChart() {
 
 async function loadArmadaList() {
   const res = await api.get('/buses');
-  const buses = res.data ?? [];
+  const buses = res.data?.data ?? [];
   
   if (!buses.length) {
     document.getElementById('armada-list').innerHTML = `<div class="empty-state" style="padding:20px"><span class="material-icons">directions_bus</span><p>Tidak ada data bus</p></div>`;
@@ -1115,7 +1115,7 @@ async function loadArmadaList() {
 
 async function loadDriverList() {
   const res = await api.get('/drivers');
-  const drivers = res.data ?? [];
+  const drivers = res.data?.data ?? [];
   
   if (!drivers.length) {
     document.getElementById('driver-list').innerHTML = `<div class="empty-state" style="padding:20px"><span class="material-icons">badge</span><p>Tidak ada data driver</p></div>`;

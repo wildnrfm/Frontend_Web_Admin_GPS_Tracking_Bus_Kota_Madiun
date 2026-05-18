@@ -71,8 +71,8 @@ async function loadDriver(page = 1) {
   currentPage = page;
   const q = document.getElementById('search').value;
   const res = await api.get('/drivers', { search: q, page, per_page: 15 });
-  const rows = res.data ?? [];
-  const meta = res.pagination;
+  const rows = res.data?.data ?? [];  // ApiClient wraps response in { data: {...} }
+  const meta = res.data?.pagination;
   const tbody = document.getElementById('driver-tbody');
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="material-icons">badge</span><p>Tidak ada driver</p></div></td></tr>`;
@@ -111,7 +111,7 @@ async function editDriver(id) {
   document.getElementById('d-pw-group').style.display = 'none';
   document.getElementById('d-pwc-group').style.display = 'none';
   const res = await api.get('/drivers/' + id);
-  const d = res.data;
+  const d = res.data?.data;
   const f = document.getElementById('driver-form');
   f.name.value = d.user?.name ?? d.name ?? '';
   f.email.value = d.user?.email ?? d.email ?? '';

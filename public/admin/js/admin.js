@@ -1,14 +1,34 @@
-/**
- * Mobitra Admin — JS
- * ApiClient + Toast + Modal + helpers
- */
+// Debug logging utility with visual panel
+window.debugLogs = [];
+window.debugPanel = null;
 
-/* ── ApiClient ─────────────────────────────────────────────────── */
+function debugLog(msg) {
+  console.log(msg);
+  window.debugLogs.push(msg);
+  
+  // Update visual panel if it exists
+  if (window.debugPanel) {
+    const div = document.createElement('div');
+    div.className = 'debug-line';
+    div.style.fontSize = '10px';
+    div.style.color = '#0f0';
+    div.textContent = msg.substring(0, 70);
+    window.debugPanel.appendChild(div);
+    
+    // Keep only last 25 lines
+    const lines = window.debugPanel.querySelectorAll('.debug-line');
+    if (lines.length > 25) lines[0].remove();
+    
+    window.debugPanel.scrollTop = window.debugPanel.scrollHeight;
+  }
+}
+
 class ApiClient {
   constructor() {
     // Point to actual API server at port 8000
     this.base = 'http://localhost:8000/api';
     this.token = document.querySelector('meta[name="admin-token"]')?.content ?? '';
+    debugLog(`[DEBUG] ApiClient initialized with token: ${this.token ? this.token.substring(0,20) + '...' : '(empty)'}`);
   }
   headers() {
     return { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token };
@@ -40,7 +60,15 @@ class ApiClient {
     // Cek content-type: kalau Laravel return HTML (bukan JSON), jangan redirect
     const ct = r.headers.get('content-type') ?? '';
     let data;
-    try { data = ct.includes('json') ? await r.json() : {}; } catch { data = {}; }
+    const rawText = await r.clone().text();  // Get raw response
+    try { 
+      data = ct.includes('json') ? JSON.parse(rawText) : {}; 
+    } catch (e) {
+      debugLog(`[ERROR] JSON parse failed: ${e.message}`);
+      debugLog(`[DEBUG] Raw response (first 300 chars): ${rawText.substring(0, 300)}`);
+      data = {}; 
+    }
+    debugLog(`[DEBUG] API Response: status=${r.status}, ct=${ct}, dataKeys=${Object.keys(data).join(',')} rawLen=${rawText.length}`);
     // Redirect ke login hanya jika: 401 JSON, tidak silent, tidak di halaman login
     if (r.status === 401 && !silent && ct.includes('json') && !location.pathname.includes('/admin/login')) {
       location.href = '/admin/login';
