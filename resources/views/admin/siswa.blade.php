@@ -13,15 +13,41 @@
     <span class="material-icons">search</span>
     <input type="text" id="search" placeholder="Cari nama, email, NIS..." oninput="debounce(loadSiswa, 400)()">
   </div>
-  <select class="filter-select" id="filter-status" onchange="loadSiswa()">
-    <option value="">Semua Status</option>
-    <option value="approved">Disetujui</option>
-    <option value="pending">Pending</option>
-    <option value="rejected">Ditolak</option>
-    <option value="suspended">Suspend</option>
-  </select>
   <button class="btn btn-icon" onclick="loadSiswa()" title="Refresh"><span class="material-icons">refresh</span></button>
 </div>
+
+<div style="padding:12px 14px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--c-border)">
+  <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">Semua</button>
+  <button class="filter-btn" data-filter="active" onclick="setFilter('active', this)">Aktif</button>
+  <button class="filter-btn" data-filter="no-bus" onclick="setFilter('no-bus', this)">Belum ada Bus</button>
+  <button class="filter-btn" data-filter="inactive" onclick="setFilter('inactive', this)">Nonaktif</button>
+</div>
+
+<style>
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--c-border);
+  background: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-text-grey);
+  transition: all 200ms;
+}
+.filter-btn.active {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: white;
+}
+.filter-btn:hover {
+  border-color: var(--c-primary);
+}
+.filter-btn.active.no-bus-filter {
+  background: var(--c-orange);
+  border-color: var(--c-orange);
+}
+</style>
 
 <div class="card" style="padding:0">
   <div class="table-wrap">
@@ -96,34 +122,64 @@
 @endsection
 @push('scripts')
 <script>
-let editId = null, currentPage = 1;
+let editId = null, currentPage = 1, currentFilter = 'all';
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  // Update button styles
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadSiswa(1);
+}
+
+function applyClientFilter(rows) {
+  if (currentFilter === 'all') return rows;
+  
+  return rows.filter(s => {
+    const userStatus = s.user?.status ?? 'active'; // default to active if not specified
+    const hasBus = (s.bus_id ?? 0) > 0;
+    
+    if (currentFilter === 'active') {
+      return userStatus === 'active' && hasBus;
+    }
+    if (currentFilter === 'no-bus') {
+      return userStatus === 'active' && !hasBus;
+    }
+    if (currentFilter === 'inactive') {
+      return userStatus !== 'active';
+    }
+    return true;
+  });
+}
 
 async function loadSiswa(page = 1) {
   currentPage = page;
-  const q      = document.getElementById('search').value;
-  const status = document.getElementById('filter-status').value;
-  const res    = await api.get('/students', { search: q, status, page, per_page: 15 });
-  debugLog(`[DEBUG] loadSiswa response status: ${res?.status}`);
-  debugLog(`[DEBUG] loadSiswa response data type: ${typeof res?.data}`);
-  debugLog(`[DEBUG] loadSiswa response data keys: ${res?.data ? Object.keys(res.data).join(',') : 'null'}`);
+  const q   = document.getElementById('search').value;
+  const res = await api.get('/students', { search: q, per_page: 1000 }); // Get all to filter client-side
+  
   // Response structure: { ok, status, data: { success, message, data: [...], pagination: {...} } }
-  const rows   = res.data?.data ?? [];
-  const meta   = res.data?.pagination;
-  const tbody  = document.getElementById('siswa-tbody');
-  debugLog(`[DEBUG] Rows count after assignment: ${rows.length}`);
-  debugLog(`[DEBUG] Pagination object: ${meta ? 'present' : 'missing'}`);
-
-
+  let rows = res.data?.data ?? [];
+  
+  // Apply client-side filtering
+  rows = applyClientFilter(rows);
+  
+  const tbody = document.getElementById('siswa-tbody');
+  
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="material-icons">school</span><p>Tidak ada data siswa</p></div></td></tr>`;
     document.getElementById('siswa-pagination').innerHTML = '';
     return;
   }
 
-  tbody.innerHTML = rows.map((s, i) => `
+  // Paginate locally
+  const perPage = 15;
+  const start = (page - 1) * perPage;
+  const paginatedRows = rows.slice(start, start + perPage);
+  
+  tbody.innerHTML = paginatedRows.map((s, i) => `
     <tr>
-      <td>${(page-1)*15 + i + 1}</td>
+      <td>${start + i + 1}</td>
       <td><div style="font-weight:600">${s.user?.name ?? 'N/A'}</div></td>
       <td style="color:var(--c-text-grey);font-size:12px">${s.user?.email ?? 'N/A'}</td>
       <td>${s.nis ?? '-'}</td>
@@ -131,23 +187,32 @@ async function loadSiswa(page = 1) {
       <td>${statusBadge(s.approval_status)}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
-          ${s.student?.approval_status === 'pending' ? `
+          ${s.approval_status === 'pending' ? `
             <button class="btn btn-xs btn-primary" onclick="approve(${s.id})">Setujui</button>
             <button class="btn btn-xs" style="background:#FDECEA;color:var(--c-red)" onclick="reject(${s.id})">Tolak</button>
           ` : ''}
-          ${s.student?.approval_status === 'approved' ? `
+          ${s.approval_status === 'approved' ? `
             <button class="btn btn-xs btn-outline" onclick="editSiswa(${s.id})">Edit</button>
-            <button class="btn btn-xs" style="background:#FFF3CD;color:var(--c-amber)" onclick="suspend(${s.id}, '${s.student?.approval_status}')">Suspend</button>
+            <button class="btn btn-xs" style="background:#FFF3CD;color:var(--c-amber)" onclick="suspend(${s.id})">Suspend</button>
           ` : ''}
-          ${s.student?.approval_status === 'suspended' ? `
-            <button class="btn btn-xs btn-primary" onclick="suspend(${s.id}, 'suspended')">Aktifkan</button>
+          ${s.approval_status === 'suspended' ? `
+            <button class="btn btn-xs btn-primary" onclick="unsuspend(${s.id})">Aktifkan</button>
           ` : ''}
           <button class="btn btn-xs btn-icon" onclick="deleteSiswa(${s.id})" title="Hapus"><span class="material-icons" style="font-size:14px">delete</span></button>
         </div>
       </td>
     </tr>`).join('');
 
-  document.getElementById('siswa-pagination').innerHTML = meta ? renderPagination(meta, (p) => loadSiswa(p)) : '';
+  // Render pagination
+  const totalPages = Math.ceil(rows.length / perPage);
+  const paginationHtml = totalPages > 1 ? `
+    <div style="display:flex;justify-content:center;gap:4px;padding:8px">
+      ${page > 1 ? `<button class="btn btn-sm btn-outline" onclick="loadSiswa(${page - 1})">← Sebelumnya</button>` : ''}
+      <span style="padding:8px 12px">Halaman ${page} dari ${totalPages}</span>
+      ${page < totalPages ? `<button class="btn btn-sm btn-outline" onclick="loadSiswa(${page + 1})">Berikutnya →</button>` : ''}
+    </div>
+  ` : '';
+  document.getElementById('siswa-pagination').innerHTML = paginationHtml;
 }
 
 function openAddModal() {
@@ -165,14 +230,14 @@ async function editSiswa(id) {
   document.getElementById('pw-group').style.display = 'none';
   document.getElementById('pwc-group').style.display = 'none';
   const res = await api.get('/students/' + id);
-  const s = res.data;
+  const s = res.data?.data;
   const f = document.getElementById('siswa-form');
-  f.name.value = s.name ?? '';
-  f.email.value = s.email ?? '';
-  if (f.nis) f.nis.value = s.student?.nis ?? '';
+  f.name.value = s.user?.name ?? '';
+  f.email.value = s.user?.email ?? '';
+  if (f.nis) f.nis.value = s.nis ?? '';
   if (f.no_hp) f.no_hp.value = s.no_hp ?? '';
-  if (f.sekolah) f.sekolah.value = s.student?.sekolah ?? '';
-  if (f.alamat) f.alamat.value = s.student?.alamat ?? '';
+  if (f.sekolah) f.sekolah.value = s.sekolah ?? '';
+  if (f.alamat) f.alamat.value = s.alamat ?? '';
   openModal('siswa-modal');
 }
 
@@ -199,12 +264,17 @@ async function reject(id) {
   });
 }
 
-async function suspend(id, currentStatus) {
-  const isSuspended = currentStatus === 'suspended';
-  const msg = isSuspended ? 'Aktifkan kembali akun ini?' : 'Suspend akun siswa ini?';
-  confirmDialog(msg, async () => {
-    const r = isSuspended ? await api.post('/students/' + id + '/unsuspend') : await api.post('/students/' + id + '/suspend');
-    r.ok ? (toast(isSuspended ? 'Akun diaktifkan' : 'Akun disuspend', 'warn'), loadSiswa(currentPage)) : toast(r.data?.message ?? 'Gagal', 'error');
+async function suspend(id) {
+  confirmDialog('Suspend akun siswa ini?', async () => {
+    const r = await api.post('/students/' + id + '/suspend');
+    r.ok ? (toast('Akun disuspend', 'warn'), loadSiswa(currentPage)) : toast(r.data?.message ?? 'Gagal', 'error');
+  });
+}
+
+async function unsuspend(id) {
+  confirmDialog('Aktifkan kembali akun ini?', async () => {
+    const r = await api.post('/students/' + id + '/unsuspend');
+    r.ok ? (toast('Akun diaktifkan', 'success'), loadSiswa(currentPage)) : toast(r.data?.message ?? 'Gagal', 'error');
   });
 }
 
