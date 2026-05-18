@@ -1,0 +1,33 @@
+#!/usr/bin/env php
+<?php
+
+use Illuminate\Foundation\Application;
+use Symfony\Component\Console\Input\ArgvInput;
+
+define('LARAVEL_START', microtime(true));
+
+// Set default port to 8001 for serve command
+$_SERVER['argv'] = $_SERVER['argv'] ?? [];
+$hasPortOption = false;
+
+foreach ($_SERVER['argv'] as $arg) {
+    if (strpos($arg, '--port') === 0) {
+        $hasPortOption = true;
+        break;
+    }
+}
+
+if (!$hasPortOption && isset($_SERVER['argv'][1]) && $_SERVER['argv'][1] === 'serve') {
+    $_SERVER['argv'][] = '--port=8001';
+}
+
+// Register the Composer autoloader...
+require __DIR__.'/vendor/autoload.php';
+
+// Bootstrap Laravel and handle the command...
+/** @var Application $app */
+$app = require_once __DIR__.'/bootstrap/app.php';
+
+$status = $app->handleCommand(new ArgvInput);
+
+exit($status);
