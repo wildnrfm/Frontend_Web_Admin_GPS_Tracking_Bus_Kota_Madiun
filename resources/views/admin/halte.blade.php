@@ -99,8 +99,8 @@ async function loadHalte(page = 1) {
   currentPage = page;
   const q = document.getElementById('search').value;
   const res = await api.get('/haltes', { search: q, page, per_page: 15 });
-  const rows = res.data?.data ?? [];
-  const meta = res.data?.meta;
+  const rows = res.data ?? [];
+  const meta = res.pagination;
   const tbody = document.getElementById('halte-tbody');
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="material-icons">place</span><p>Tidak ada halte</p></div></td></tr>`;
@@ -145,7 +145,7 @@ async function editHalte(id) {
   editId = id;
   document.getElementById('halte-modal-title').textContent = 'Edit Halte';
   const res = await api.get('/haltes/' + id);
-  const h = res.data?.data ?? res.data;
+  const h = res.data;
   const f = document.getElementById('halte-form');
   f.nama_halte.value = h.nama_halte ?? '';
   document.getElementById('lat-input').value = h.latitude ?? '';

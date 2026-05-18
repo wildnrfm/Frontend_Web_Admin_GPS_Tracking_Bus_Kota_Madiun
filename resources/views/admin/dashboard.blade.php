@@ -99,7 +99,7 @@
           <span class="material-icons" style="color:#F4A100">place</span>
         </div>
         <div class="db-kelola-lbl">Halte</div>
-        <div class="db-kelola-cnt" id="halte-count">0</div>
+        <div class="db-kelola-cnt">{{ $stats['total_haltes'] ?? 0 }}</div>
       </div>
     </div>
 
@@ -576,18 +576,7 @@ async function loadGPS() {
   }
 }
 
-// Load halte count SATU KALI saja (tidak perlu polling)
-function loadHalteCount() {
-  // silent=true: jangan redirect ke login kalau API gagal
-  api.get('/haltes', { per_page: 1 }, true).then(r => {
-    const t  = r?.data?.meta?.total ?? 0;
-    const el = document.getElementById('halte-count');
-    if (el) el.textContent = t;
-  }).catch(() => {});
-}
-
 loadGPS();
-loadHalteCount();
 
 // Polling setiap 3 detik (seperti mobile)
 setInterval(loadGPS, 3000);

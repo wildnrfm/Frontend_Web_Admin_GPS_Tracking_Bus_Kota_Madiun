@@ -104,8 +104,8 @@ async function loadSiswa(page = 1) {
   const q      = document.getElementById('search').value;
   const status = document.getElementById('filter-status').value;
   const res    = await api.get('/students', { search: q, status, page, per_page: 15 });
-  const rows   = res.data?.data ?? [];
-  const meta   = res.data?.meta;
+  const rows   = res.data ?? [];
+  const meta   = res.pagination;
   const tbody  = document.getElementById('siswa-tbody');
 
   if (!rows.length) {
@@ -158,7 +158,7 @@ async function editSiswa(id) {
   document.getElementById('pw-group').style.display = 'none';
   document.getElementById('pwc-group').style.display = 'none';
   const res = await api.get('/students/' + id);
-  const s = res.data?.data ?? res.data;
+  const s = res.data;
   const f = document.getElementById('siswa-form');
   f.name.value = s.name ?? '';
   f.email.value = s.email ?? '';
