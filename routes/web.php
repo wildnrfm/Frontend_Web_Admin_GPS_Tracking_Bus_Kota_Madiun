@@ -91,7 +91,7 @@ Route::middleware(['web', 'admin.authenticated'])->group(function () {
 Route::get('/{any}', function () {
     $authService = app(\App\Services\AuthService::class);
     if ($authService->isAuthenticated()) {
-        return redirect()->route('dashboard');
+        return redirect()->route('admin.dashboard');
     }
     return redirect()->route('login');
 })->where('any', '.*')->name('fallback');
