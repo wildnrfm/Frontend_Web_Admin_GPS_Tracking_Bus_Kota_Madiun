@@ -6,7 +6,8 @@
 /* ── ApiClient ─────────────────────────────────────────────────── */
 class ApiClient {
   constructor() {
-    this.base = '/api';
+    // Point to actual API server at port 8000
+    this.base = 'http://localhost:8000/api';
     this.token = document.querySelector('meta[name="admin-token"]')?.content ?? '';
   }
   headers() {

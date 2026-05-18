@@ -491,30 +491,28 @@ document.getElementById('greeting-text').textContent =
 let map, markers = {}, mapBoundsFitted = false;
 
 async function loadGPS() {
-  // silent=true: jangan redirect ke login kalau API gagal
   const res = await api.get('/gps-tracks/dashboard', {}, true).catch(() => null);
-  if (!res || !res.ok) return; // diam-diam abaikan jika gagal
+  if (!res || !res.ok) return;
 
-  const gpsBuses = res?.data?.data ?? [];
+  const gpsBuses = res?.data?.data?.data ?? [];
 
-  // Init map hanya sekali
   if (!map) {
     map = L.map('gps-map', { zoomControl: false, attributionControl: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     map.setView([-7.6298, 111.5233], 13);
   }
 
-  const activeBuses = gpsBuses.filter(b => b.gps_status === 'on' && b.current_position);
+  // Filter bus operasi: gps_status = 'on' (sama seperti mobile)
+  const activeBuses = gpsBuses.filter(b => b.gps_status === 'on');
 
-  // Update badge & stat — hanya text, tidak flicker
-  const badgeEl = document.getElementById('badge-count');
-  const statEl  = document.getElementById('stat-bus-active');
-  if (badgeEl) badgeEl.textContent = activeBuses.length + ' bus aktif';
-  if (statEl)  statEl.textContent  = activeBuses.length;
+  // Update stats
+  document.getElementById('stat-bus-active').textContent = activeBuses.length;
+  document.getElementById('badge-count').textContent = activeBuses.length + ' bus aktif';
 
-  // Update markers (tambah/pindah/hapus)
+  // Update markers (tambah/pindah/hapus) — hanya untuk bus yang punya current_position
   const seen = new Set();
   activeBuses.forEach((b, idx) => {
+    if (!b.current_position) return; // Skip jika belum ada posisi GPS
     const pos    = b.current_position;
     const latLng = [pos.latitude, pos.longitude];
     seen.add(b.bus_id);
@@ -533,24 +531,28 @@ async function loadGPS() {
     if (!seen.has(+id)) { map.removeLayer(markers[id]); delete markers[id]; }
   });
 
-  // Fit bounds hanya saat pertama kali ada bus aktif
+  // Fit bounds hanya untuk bus yang punya current_position
   if (!mapBoundsFitted && activeBuses.length > 0) {
-    const lats = activeBuses.map(b => b.current_position.latitude);
-    const lngs = activeBuses.map(b => b.current_position.longitude);
-    map.fitBounds([[Math.min(...lats),Math.min(...lngs)],[Math.max(...lats),Math.max(...lngs)]],{padding:[20,20]});
-    mapBoundsFitted = true;
+    const busesWithPosition = activeBuses.filter(b => b.current_position);
+    if (busesWithPosition.length > 0) {
+      const lats = busesWithPosition.map(b => b.current_position.latitude);
+      const lngs = busesWithPosition.map(b => b.current_position.longitude);
+      map.fitBounds([[Math.min(...lats),Math.min(...lngs)],[Math.max(...lats),Math.max(...lngs)]],{padding:[20,20]});
+      mapBoundsFitted = true;
+    }
   }
 
-  // Build bus list HTML — satu kali assignment saja (tidak double)
+  // Build bus list
   let listHtml = '';
   if (activeBuses.length === 0) {
     listHtml = `<div style="padding:12px;text-align:center;font-size:13px;color:var(--c-text-grey)">Belum ada bus beroperasi</div>`;
   } else {
     activeBuses.forEach(b => {
-      const pos    = b.current_position;
-      const speed  = (pos.speed ?? 0).toFixed(0);
-      const name   = b.bus_code ?? b.kode_bus ?? '—';
-      const driver = b.driver_name ?? '—';
+      const pos = b.current_position;
+      const speed = pos ? (pos.speed ?? 0).toFixed(0) : '-';
+      const name = b.bus_code ?? '—';
+      const driver = b.driver?.name ?? '—';
+      const speedText = pos ? `${speed} km/h` : 'Waiting GPS';
       listHtml += `<div class="db-bus-item">
         <div class="db-bus-icon">
           <span class="material-icons" style="color:var(--c-primary);font-size:18px">directions_bus</span>
@@ -561,7 +563,7 @@ async function loadGPS() {
         </div>
         <div style="text-align:right">
           <span class="live-badge">LIVE</span>
-          <div style="font-size:13px;font-weight:700;margin-top:3px">${speed} km/h</div>
+          <div style="font-size:13px;font-weight:700;margin-top:3px">${speedText}</div>
         </div>
       </div>`;
     });
@@ -586,5 +588,8 @@ function loadHalteCount() {
 
 loadGPS();
 loadHalteCount();
+
+// Polling setiap 3 detik (seperti mobile)
+setInterval(loadGPS, 3000);
 </script>
 @endpush

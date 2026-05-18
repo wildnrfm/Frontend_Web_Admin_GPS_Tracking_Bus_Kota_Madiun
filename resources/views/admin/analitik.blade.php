@@ -871,7 +871,7 @@ async function loadStats() {
   // Handle GPS data - ensure it's always an array
   let gpsOn = 0;
   if (gpsRes?.data) {
-    let gpsBuses = Array.isArray(gpsRes.data?.data) ? gpsRes.data.data : Array.isArray(gpsRes.data) ? gpsRes.data : [];
+    let gpsBuses = gpsRes.data?.data?.data ?? (Array.isArray(gpsRes.data?.data) ? gpsRes.data.data : []);
     gpsOn = Array.isArray(gpsBuses) ? gpsBuses.filter(b => b.gps_status === 'on' || b.status === 'on').length : 0;
   }
 

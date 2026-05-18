@@ -141,7 +141,7 @@ async function fallbackPolling() {
 async function pollGPS() {
   try {
     const res = await api.get('/gps-tracks/dashboard');
-    const buses = res.data?.data ?? [];
+    const buses = res.data?.data?.data ?? [];
     const mapped = buses.map(b => ({
       bus_id: b.bus_id, bus_code: b.bus_code, bus_plate: b.bus_plate,
       gps_status: b.gps_status, driver_name: b.driver?.name ?? '',
