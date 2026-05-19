@@ -113,16 +113,42 @@
 
 {{-- Modal Route & Halte --}}
 <div class="modal-overlay" id="route-halte-modal">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-header">
-      <div class="modal-title">Rute & Halte - <span id="route-bus-name"></span></div>
+  <div class="modal" style="max-width:650px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header" style="position:sticky;top:0;z-index:10">
+      <div>
+        <div class="modal-title" id="route-title-text">Rute & Halte</div>
+        <div style="font-size:12px;color:var(--c-text-grey);margin-top:4px" id="route-polyline-count"></div>
+      </div>
       <button class="modal-close" onclick="closeModal('route-halte-modal')"><span class="material-icons">close</span></button>
     </div>
     <div class="modal-body">
-      <div id="route-content" style="max-height:400px;overflow-y:auto"></div>
+      <!-- Peta -->
+      <div id="route-map" style="width:100%;height:320px;border-radius:8px;margin-bottom:20px;background:#f0f0f0"></div>
+      
+      <!-- Urutan Halte -->
+      <div style="margin-bottom:20px">
+        <div style="font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+          <span>📍 Urutan Halte</span>
+          <span id="halte-count-badge" style="background:var(--c-primary);color:white;padding:2px 8px;border-radius:12px;font-size:12px">0 halte</span>
+        </div>
+        <div id="halte-list-content" style="display:flex;flex-direction:column;gap:12px"></div>
+      </div>
+      
+      <!-- Info Guides -->
+      <div style="background:#E8F5E9;border-left:4px solid #2E7D32;padding:12px;border-radius:4px;font-size:12px;margin-bottom:16px">
+        <div style="font-weight:600;color:#1B5E20;margin-bottom:8px">📌 Cara membuat rute</div>
+        <ol style="margin:0;padding-left:16px">
+          <li>Pastikan halte sudah terdaftar di menu Halte</li>
+          <li>Tap "Ubah Rute" untuk setting rute baru (atau ubah rute lama)</li>
+          <li>Pilih halte-halte yang dilalui bus, atur urutannya</li>
+          <li>Jalan di peta otomatis terekam ikuti jalan nyata</li>
+        </ol>
+      </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('route-halte-modal')">Tutup</button>
+    <div class="modal-footer" style="position:sticky;bottom:0;z-index:10">
+      <button class="btn btn-sm btn-outline" onclick="closeModal('route-halte-modal')">Tutup</button>
+      <button class="btn btn-sm" style="background:#2E7D32;color:white;border:none" id="edit-route-btn" onclick="editRoute()">✏️ Ubah Rute</button>
+      <button class="btn btn-sm" style="background:#D32F2F;color:white;border:none" id="delete-route-btn" onclick="deleteRoute()">🗑️ Hapus</button>
     </div>
   </div>
 </div>
@@ -263,50 +289,129 @@ async function deleteBus(id) {
 
 // ──── Route & Halte ────
 let currentBusId = null;
+let routeMapInstance = null;
+let currentRouteData = null;
+
 async function openRouteHalte(busId, busName) {
   currentBusId = busId;
-  document.getElementById('route-bus-name').textContent = busName;
   
-  // Get routes for this bus
+  // Get route for this bus
   const res = await api.get(`/buses/${busId}/route`);
-  const routes = res.data?.data ?? [];
+  const route = res.data?.data;
   
-  if (!routes.length) {
-    document.getElementById('route-content').innerHTML = `
-      <div class="empty-state">
-        <p style="color:var(--c-text-grey)">Belum ada rute untuk bus ini</p>
-      </div>
-    `;
-  } else {
-    let html = `<div style="display:flex;flex-direction:column;gap:12px">`;
-    for (const route of routes) {
-      html += `
-        <div style="border:1px solid var(--c-border);border-radius:8px;padding:12px">
-          <div style="font-weight:600;margin-bottom:8px">${route.nama_rute}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-            ${route.haltes?.map(h => `<span style="background:var(--c-bg-light);padding:4px 8px;border-radius:4px;font-size:12px">${h.nama_halte}</span>`).join('') || '<span style="color:var(--c-text-grey);font-size:12px">Belum ada halte</span>'}
+  if (!route) {
+    document.getElementById('route-title-text').textContent = 'Rute & Halte - ' + busName;
+    document.getElementById('route-polyline-count').textContent = 'Belum ada rute untuk bus ini';
+    document.getElementById('halte-list-content').innerHTML = '<p style="color:var(--c-text-grey);text-align:center;padding:20px">Belum ada halte</p>';
+    document.getElementById('halte-count-badge').textContent = '0 halte';
+    document.getElementById('route-map').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--c-text-grey)">Belum ada data rute</div>';
+    openModal('route-halte-modal');
+    return;
+  }
+  
+  currentRouteData = route;
+  
+  // Set title
+  document.getElementById('route-title-text').textContent = route.nama_rute || 'Rute & Halte - ' + busName;
+  document.getElementById('route-polyline-count').textContent = (route.polyline?.length || 0) + ' titik polyline';
+  
+  // Set halte count
+  const halteCount = route.haltes?.length || 0;
+  document.getElementById('halte-count-badge').textContent = halteCount + ' halte';
+  
+  // Render halte list
+  let halteHtml = '';
+  if (halteCount > 0) {
+    for (let i = 0; i < route.haltes.length; i++) {
+      const halte = route.haltes[i];
+      const halteData = halte.halte;
+      const colors = ['#4CAF50', '#F44336', '#2196F3', '#FF9800', '#9C27B0', '#00BCD4'];
+      const color = colors[i % colors.length];
+      
+      halteHtml += `
+        <div style="display:flex;gap:12px;padding:12px;border:1px solid var(--c-border);border-radius:6px">
+          <div style="display:flex;align-items:center;justify-content:center;min-width:36px;width:36px;height:36px;background:${color};color:white;border-radius:50%;font-weight:600">${i + 1}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">${halteData?.nama_halte || 'N/A'}</div>
+            <div style="font-size:12px;color:var(--c-text-grey)">${halteData?.alamat || 'Alamat tidak tersedia'}</div>
           </div>
-          <button class="btn btn-xs btn-outline" onclick="editRoute(${route.id})">Edit</button>
-          <button class="btn btn-xs btn-icon" onclick="deleteRoute(${route.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
         </div>
       `;
     }
-    html += `</div>`;
-    document.getElementById('route-content').innerHTML = html;
+  } else {
+    halteHtml = '<p style="color:var(--c-text-grey);text-align:center;padding:20px">Belum ada halte dalam rute ini</p>';
   }
+  document.getElementById('halte-list-content').innerHTML = halteHtml;
+  
+  // Render map
+  setTimeout(() => {
+    if (routeMapInstance) {
+      routeMapInstance.remove();
+    }
+    
+    const mapContainer = document.getElementById('route-map');
+    routeMapInstance = L.map(mapContainer).setView([-7.6288, 111.5305], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(routeMapInstance);
+    
+    // Plot polyline
+    if (route.polyline && route.polyline.length > 0) {
+      const polylineCoords = route.polyline.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]);
+      L.polyline(polylineCoords, { color: '#2196F3', weight: 3, opacity: 0.8 }).addTo(routeMapInstance);
+      routeMapInstance.fitBounds(L.latLngBounds(polylineCoords));
+    }
+    
+    // Plot halte markers
+    if (route.haltes && route.haltes.length > 0) {
+      const colors = ['#4CAF50', '#F44336', '#2196F3', '#FF9800', '#9C27B0', '#00BCD4'];
+      route.haltes.forEach((rh, idx) => {
+        const halteData = rh.halte;
+        if (halteData?.latitude && halteData?.longitude) {
+          const color = colors[idx % colors.length];
+          const marker = L.circleMarker(
+            [parseFloat(halteData.latitude), parseFloat(halteData.longitude)],
+            { radius: 24, fillColor: color, color: color, weight: 2, opacity: 1, fillOpacity: 0.8 }
+          ).addTo(routeMapInstance);
+          
+          marker.bindPopup(`<div style="font-weight:600">${halteData.nama_halte}</div><div style="font-size:12px">${halteData.alamat}</div>`);
+          
+          L.marker([parseFloat(halteData.latitude), parseFloat(halteData.longitude)], {
+            icon: L.divIcon({
+              html: `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:${color};color:white;border-radius:50%;font-weight:600;font-size:14px">${idx + 1}</div>`,
+              iconSize: [30, 30],
+              className: 'custom-marker'
+            })
+          }).addTo(routeMapInstance);
+        }
+      });
+    }
+  }, 100);
   
   openModal('route-halte-modal');
 }
 
-async function editRoute(routeId) {
-  toast('Edit rute feature sedang dikembangkan', 'info');
+async function editRoute() {
+  if (currentRouteData) {
+    toast('Edit rute feature sedang dikembangkan', 'info');
+  }
 }
 
-async function deleteRoute(routeId) {
-  confirmDialog('Hapus rute ini?', async () => {
-    const r = await api.delete('/routes/' + routeId);
-    r.ok ? (toast('Rute dihapus'), openRouteHalte(currentBusId, 'Bus')) : toast(r.data?.message ?? 'Gagal', 'error');
-  });
+async function deleteRoute() {
+  if (currentRouteData) {
+    confirmDialog('Hapus rute ini?', async () => {
+      const r = await api.delete('/routes/' + currentRouteData.id);
+      if (r.ok) {
+        toast('Rute dihapus');
+        closeModal('route-halte-modal');
+        loadBus(currentPage);
+      } else {
+        toast(r.data?.message ?? 'Gagal menghapus rute', 'error');
+      }
+    });
+  }
 }
 
 // ──── Siswa ────
@@ -314,11 +419,12 @@ async function openSiswa(busId, busName) {
   currentBusId = busId;
   document.getElementById('siswa-bus-name').textContent = busName;
   
-  // Get students for this bus
+  // Get students for this bus (API returns paginated data)
   const res = await api.get(`/buses/${busId}/students`);
-  const students = res.data?.data ?? [];
+  // Handle both direct array and paginated response structure
+  const students = res.data?.data?.data ?? res.data?.data ?? [];
   
-  if (!students.length) {
+  if (!students || students.length === 0) {
     document.getElementById('siswa-content').innerHTML = `
       <div class="empty-state">
         <p style="color:var(--c-text-grey)">Belum ada siswa untuk bus ini</p>
@@ -327,14 +433,18 @@ async function openSiswa(busId, busName) {
   } else {
     let html = `<div style="display:flex;flex-direction:column;gap:8px">`;
     for (const siswa of students) {
+      const namaSiswa = siswa.user?.name || siswa.name || 'N/A';
+      const emailSiswa = siswa.user?.email || siswa.email || 'N/A';
+      const siswaId = siswa.id || siswa.student_id;
+      
       html += `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--c-border);border-radius:6px">
-          <div>
-            <div style="font-weight:600;font-size:14px">${siswa.user?.name || siswa.name || 'N/A'}</div>
-            <div style="font-size:12px;color:var(--c-text-grey)">${siswa.user?.email || siswa.email || 'N/A'}</div>
-            ${siswa.halte_tujuan ? `<div style="font-size:12px;color:var(--c-text-grey)">Halte: ${siswa.halte_tujuan}</div>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--c-border);border-radius:6px;background:white">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">${namaSiswa}</div>
+            <div style="font-size:12px;color:var(--c-text-grey)">${emailSiswa}</div>
+            ${siswa.halte_tujuan ? `<div style="font-size:11px;color:#1976d2;background:#e3f2fd;padding:2px 6px;border-radius:3px;display:inline-block;margin-top:4px">📍 ${siswa.halte_tujuan}</div>` : ''}
           </div>
-          <button class="btn btn-xs btn-icon" onclick="removeSiswaFromBus(${siswa.id || siswa.student_id})"><span class="material-icons" style="font-size:14px;color:red">delete</span></button>
+          <button class="btn btn-xs btn-icon" onclick="removeSiswaFromBus(${siswaId})" style="background:#ffebee;border:none"><span class="material-icons" style="font-size:14px;color:#d32f2f">delete</span></button>
         </div>
       `;
     }
