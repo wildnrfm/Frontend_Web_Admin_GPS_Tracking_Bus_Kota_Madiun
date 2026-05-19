@@ -109,6 +109,22 @@
             <label class="form-label">Konfirmasi Password</label>
             <input class="form-control" name="password_confirmation" type="password" placeholder="Ulangi password">
           </div>
+          <div class="form-group" id="change-pw-group" style="grid-column:1/-1; display:none">
+            <label class="form-checkbox">
+              <input type="checkbox" id="change-password-check" onchange="togglePasswordFields()">
+              <span>Ganti Password Siswa</span>
+            </label>
+          </div>
+          <div id="edit-password-fields" style="display:none; grid-column:1/-1">
+            <div class="form-group">
+              <label class="form-label">Password Baru</label>
+              <input class="form-control" name="new_password" type="password" placeholder="Min. 8 karakter">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Konfirmasi Password</label>
+              <input class="form-control" name="new_password_confirmation" type="password" placeholder="Ulangi password">
+            </div>
+          </div>
         </div>
       </form>
     </div>
@@ -119,15 +135,135 @@
   </div>
 </div>
 
+{{-- Modal Ganti Bus --}}
+<div class="modal-overlay" id="bus-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Tetapkan Bus untuk <span id="bus-modal-siswa-name"></span></div>
+      <button class="modal-close" onclick="closeModal('bus-modal')"><span class="material-icons">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Pilih Bus</label>
+        <select class="form-control" id="bus-select" onchange="loadHaltesForBus()">
+          <option value="">-- Pilih Bus --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pilih Halte</label>
+        <select class="form-control" id="halte-select">
+          <option value="">-- Pilih Halte --</option>
+        </select>
+      </div>
+      <div style="padding:12px; background:#F5F5F5; border-radius:4px; font-size:12px; color:var(--c-text-grey)">
+        <span class="material-icons" style="font-size:14px;vertical-align:middle">info</span>
+        Halte yang tersedia adalah halte di rute bus yang dipilih.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('bus-modal')">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveBusAssignment()">Simpan</button>
+    </div>
+  </div>
+</div>
+
 @endsection
 @push('scripts')
 <script>
-let editId = null, currentPage = 1, currentFilter = 'all';
+let editId = null, currentPage = 1, currentFilter = 'all', busesList = [], currentStudentId = null;
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+// Load buses on page load
+async function loadBuses() {
+  try {
+    const res = await api.get('/buses', { per_page: 1000 });
+    busesList = res.data?.data ?? [];
+    populateBusSelect();
+  } catch (e) {
+    console.error('Failed to load buses:', e);
+  }
+}
+
+function populateBusSelect() {
+  const select = document.getElementById('bus-select');
+  select.innerHTML = '<option value="">-- Pilih Bus --</option>' +
+    busesList.map(b => `<option value="${b.id}">${b.kode_bus} (${b.plat_nomor})</option>`).join('');
+}
+
+function togglePasswordFields() {
+  const check = document.getElementById('change-password-check')?.checked;
+  document.getElementById('edit-password-fields').style.display = check ? '' : 'none';
+}
+
+async function openBusModal(siswaId, siswaName) {
+  currentStudentId = siswaId;
+  document.getElementById('bus-modal-siswa-name').textContent = siswaName;
+  document.getElementById('bus-select').value = '';
+  document.getElementById('halte-select').innerHTML = '<option value="">-- Pilih Halte --</option>';
+  openModal('bus-modal');
+}
+
+async function loadHaltesForBus() {
+  const busId = document.getElementById('bus-select').value;
+  if (!busId) {
+    document.getElementById('halte-select').innerHTML = '<option value="">-- Pilih Halte --</option>';
+    return;
+  }
+  
+  try {
+    const res = await api.get('/buses/' + busId, {});
+    const bus = res.data?.data;
+    const routes = bus?.routes ?? [];
+    let haltes = [];
+    
+    // Collect haltes from all routes
+    for (const route of routes) {
+      const routeHaltes = route.haltes ?? [];
+      haltes = haltes.concat(routeHaltes);
+    }
+    
+    // Remove duplicates by id
+    haltes = haltes.filter((h, i, arr) => arr.findIndex(x => x.id === h.id) === i);
+    
+    const select = document.getElementById('halte-select');
+    select.innerHTML = '<option value="">-- Pilih Halte --</option>' +
+      haltes.map(h => `<option value="${h.id}">${h.nama_halte}</option>`).join('');
+  } catch (e) {
+    toast('Gagal memuat halte', 'error');
+    console.error(e);
+  }
+}
+
+async function saveBusAssignment() {
+  const busId = document.getElementById('bus-select').value;
+  const halteId = document.getElementById('halte-select').value;
+  
+  if (!busId || !halteId) {
+    toast('Bus dan Halte harus dipilih', 'error');
+    return;
+  }
+  
+  try {
+    const res = await api.post(`/buses/${busId}/students`, {
+      student_id: currentStudentId,
+      halte_id: halteId
+    });
+    
+    if (res.ok) {
+      toast('Bus berhasil ditetapkan');
+      closeModal('bus-modal');
+      loadSiswa(currentPage);
+    } else {
+      toast(res.data?.message ?? 'Gagal menetapkan bus', 'error');
+    }
+  } catch (e) {
+    toast('Gagal menetapkan bus', 'error');
+    console.error(e);
+  }
+}
 
 function setFilter(filter, btn) {
   currentFilter = filter;
-  // Update button styles
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   loadSiswa(1);
@@ -137,7 +273,7 @@ function applyClientFilter(rows) {
   if (currentFilter === 'all') return rows;
   
   return rows.filter(s => {
-    const userStatus = s.user?.status ?? 'active'; // default to active if not specified
+    const userStatus = s.user?.status ?? 'active';
     const hasBus = (s.bus_id ?? 0) > 0;
     
     if (currentFilter === 'active') {
@@ -156,12 +292,9 @@ function applyClientFilter(rows) {
 async function loadSiswa(page = 1) {
   currentPage = page;
   const q   = document.getElementById('search').value;
-  const res = await api.get('/students', { search: q, per_page: 1000 }); // Get all to filter client-side
+  const res = await api.get('/students', { search: q, per_page: 1000 });
   
-  // Response structure: { ok, status, data: { success, message, data: [...], pagination: {...} } }
   let rows = res.data?.data ?? [];
-  
-  // Apply client-side filtering
   rows = applyClientFilter(rows);
   
   const tbody = document.getElementById('siswa-tbody');
@@ -172,7 +305,6 @@ async function loadSiswa(page = 1) {
     return;
   }
 
-  // Paginate locally
   const perPage = 15;
   const start = (page - 1) * perPage;
   const paginatedRows = rows.slice(start, start + perPage);
@@ -192,18 +324,21 @@ async function loadSiswa(page = 1) {
             <button class="btn btn-xs" style="background:#FDECEA;color:var(--c-red)" onclick="reject(${s.id})">Tolak</button>
           ` : ''}
           ${s.approval_status === 'approved' ? `
+            <button class="btn btn-xs" style="background:#E8F5E9;color:#2E7D32;cursor:pointer" onclick="openBusModal(${s.id}, '${s.user?.name}')">
+              <span class="material-icons" style="font-size:14px">directions_bus</span>
+            </button>
             <button class="btn btn-xs btn-outline" onclick="editSiswa(${s.id})">Edit</button>
-            <button class="btn btn-xs" style="background:#FFF3CD;color:var(--c-amber)" onclick="suspend(${s.id})">Suspend</button>
+            <button class="btn btn-xs" style="background:#FFF3CD;color:var(--c-amber)" onclick="suspend(${s.id})">Nonaktif</button>
+            <button class="btn btn-xs btn-icon" onclick="deleteSiswa(${s.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
           ` : ''}
           ${s.approval_status === 'suspended' ? `
             <button class="btn btn-xs btn-primary" onclick="unsuspend(${s.id})">Aktifkan</button>
+            <button class="btn btn-xs btn-icon" onclick="deleteSiswa(${s.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
           ` : ''}
-          <button class="btn btn-xs btn-icon" onclick="deleteSiswa(${s.id})" title="Hapus"><span class="material-icons" style="font-size:14px">delete</span></button>
         </div>
       </td>
     </tr>`).join('');
 
-  // Render pagination
   const totalPages = Math.ceil(rows.length / perPage);
   const paginationHtml = totalPages > 1 ? `
     <div style="display:flex;justify-content:center;gap:4px;padding:8px">
@@ -221,6 +356,7 @@ function openAddModal() {
   document.getElementById('siswa-form').reset();
   document.getElementById('pw-group').style.display = '';
   document.getElementById('pwc-group').style.display = '';
+  document.getElementById('change-pw-group').style.display = 'none';
   openModal('siswa-modal');
 }
 
@@ -229,6 +365,10 @@ async function editSiswa(id) {
   document.getElementById('modal-title').textContent = 'Edit Siswa';
   document.getElementById('pw-group').style.display = 'none';
   document.getElementById('pwc-group').style.display = 'none';
+  document.getElementById('change-pw-group').style.display = '';
+  document.getElementById('change-password-check').checked = false;
+  document.getElementById('edit-password-fields').style.display = 'none';
+  
   const res = await api.get('/students/' + id);
   const s = res.data?.data;
   const f = document.getElementById('siswa-form');
@@ -243,11 +383,31 @@ async function editSiswa(id) {
 
 async function saveSiswa() {
   const f = document.getElementById('siswa-form');
-  const body = { name: f.name.value, email: f.email.value, nis: f.nis?.value, no_hp: f.no_hp?.value, sekolah: f.sekolah?.value, alamat: f.alamat?.value };
-  if (!editId) { body.password = f.password.value; body.password_confirmation = f.password_confirmation.value; }
+  const body = { 
+    name: f.name.value, 
+    email: f.email.value, 
+    nis: f.nis?.value, 
+    no_hp: f.no_hp?.value, 
+    sekolah: f.sekolah?.value, 
+    alamat: f.alamat?.value 
+  };
+  
+  if (!editId) { 
+    body.password = f.password.value; 
+    body.password_confirmation = f.password_confirmation.value; 
+  } else if (document.getElementById('change-password-check')?.checked) {
+    body.password = f.new_password?.value;
+    body.password_confirmation = f.new_password_confirmation?.value;
+  }
+  
   const res = editId ? await api.put('/students/' + editId, body) : await api.post('/students', body);
-  if (res.ok) { toast('Data berhasil disimpan'); closeModal('siswa-modal'); loadSiswa(currentPage); }
-  else toast(res.data?.message ?? 'Gagal menyimpan', 'error');
+  if (res.ok) { 
+    toast('Data berhasil disimpan'); 
+    closeModal('siswa-modal'); 
+    loadSiswa(currentPage); 
+  } else {
+    toast(res.data?.message ?? 'Gagal menyimpan', 'error');
+  }
 }
 
 async function approve(id) {
@@ -265,9 +425,9 @@ async function reject(id) {
 }
 
 async function suspend(id) {
-  confirmDialog('Suspend akun siswa ini?', async () => {
+  confirmDialog('Nonaktifkan akun siswa ini?', async () => {
     const r = await api.post('/students/' + id + '/suspend');
-    r.ok ? (toast('Akun disuspend', 'warn'), loadSiswa(currentPage)) : toast(r.data?.message ?? 'Gagal', 'error');
+    r.ok ? (toast('Akun dinonaktifkan', 'warn'), loadSiswa(currentPage)) : toast(r.data?.message ?? 'Gagal', 'error');
   });
 }
 
@@ -285,36 +445,9 @@ async function deleteSiswa(id) {
   });
 }
 
-try {
-  debugLog('[DEBUG] Calling loadSiswa()...');
-  loadSiswa();
-} catch (e) {
-  debugLog(`[ERROR] Error in loadSiswa: ${e.message}` );
-}
-
-// Create visual debug panel
-const debugPanel = document.createElement('div');
-debugPanel.id = 'debug-panel';
-debugPanel.style.cssText = 'position:fixed;bottom:10px;left:10px;background:#000;color:#0f0;padding:10px;font-family:monospace;font-size:11px;max-width:500px;max-height:250px;overflow-y:auto;z-index:9999;border:2px solid #0f0';
-document.body.appendChild(debugPanel);
-
-// Assign to global window so debugLog can update it
-window.debugPanel = debugPanel;
-
-// Show token info
-const tokenMeta = document.querySelector('meta[name="admin-token"]')?.content;
-const div1 = document.createElement('div');
-div1.textContent = `Token: ${tokenMeta ? tokenMeta.substring(0,25) + '...' : 'EMPTY'}`;
-debugPanel.appendChild(div1);
-
-const div2 = document.createElement('div');
-div2.textContent = `API: localhost:8000`;
-debugPanel.appendChild(div2);
-
-const div3 = document.createElement('div');
-div3.textContent = `---`;
-debugPanel.appendChild(div3);
-
-debugLog('[PAGE] siswa.blade.php loaded');
+document.addEventListener('DOMContentLoaded', () => {
+  loadBuses();
+  loadSiswa(1);
+});
 </script>
 @endpush
