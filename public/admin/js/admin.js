@@ -182,13 +182,18 @@ function fmtDateTime(str) {
 }
 
 /* ── Status badge helper ─────────────────────────────────────────── */
-function statusBadge(status) {
+function statusBadge(status, isSuspended = false) {
+  // Prioritas: suspended > approval_status
+  if (isSuspended) {
+    return `<span class="badge badge-grey">Nonaktif</span>`;
+  }
+  
   const map = {
     approved: ['badge-green', 'Disetujui'],
     active:   ['badge-green', 'Aktif'],
     pending:  ['badge-orange', 'Pending'],
     rejected: ['badge-red', 'Ditolak'],
-    suspended:['badge-red', 'Suspend'],
+    suspended:['badge-red', 'Nonaktif'],
     inactive: ['badge-grey', 'Tidak Aktif'],
     aktif:    ['badge-green', 'Aktif'],
     maintenance: ['badge-orange', 'Perawatan'],

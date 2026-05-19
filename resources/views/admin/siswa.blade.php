@@ -316,14 +316,14 @@ async function loadSiswa(page = 1) {
       <td style="color:var(--c-text-grey);font-size:12px">${s.user?.email ?? 'N/A'}</td>
       <td>${s.nis ?? '-'}</td>
       <td style="font-size:12px">${s.sekolah ?? '-'}</td>
-      <td>${statusBadge(s.approval_status)}</td>
+      <td>${statusBadge(s.approval_status, s.is_suspended)}</td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           ${s.approval_status === 'pending' ? `
             <button class="btn btn-xs btn-primary" onclick="approve(${s.id})">Setujui</button>
             <button class="btn btn-xs" style="background:#FDECEA;color:var(--c-red)" onclick="reject(${s.id})">Tolak</button>
           ` : ''}
-          ${s.approval_status === 'approved' ? `
+          ${s.approval_status === 'approved' && !s.is_suspended ? `
             <button class="btn btn-xs" style="background:#E8F5E9;color:#2E7D32;cursor:pointer" onclick="openBusModal(${s.id}, '${s.user?.name}')">
               <span class="material-icons" style="font-size:14px">directions_bus</span>
             </button>
@@ -331,7 +331,7 @@ async function loadSiswa(page = 1) {
             <button class="btn btn-xs" style="background:#FFF3CD;color:var(--c-amber)" onclick="suspend(${s.id})">Nonaktif</button>
             <button class="btn btn-xs btn-icon" onclick="deleteSiswa(${s.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
           ` : ''}
-          ${s.approval_status === 'suspended' ? `
+          ${s.is_suspended ? `
             <button class="btn btn-xs btn-primary" onclick="unsuspend(${s.id})">Aktifkan</button>
             <button class="btn btn-xs btn-icon" onclick="deleteSiswa(${s.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
           ` : ''}
