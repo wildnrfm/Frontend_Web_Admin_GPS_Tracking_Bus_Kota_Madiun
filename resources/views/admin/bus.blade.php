@@ -48,9 +48,9 @@
 <div class="card" style="padding:0">
   <div class="table-wrap">
     <table>
-      <thead><tr><th>#</th><th>Kode Bus</th><th>Plat Nomor</th><th>Nama</th><th>Kapasitas</th><th>Status</th><th>GPS</th><th>Aksi</th></tr></thead>
+      <thead><tr><th>#</th><th>Kode Bus</th><th>Plat Nomor</th><th>Status</th><th>GPS</th><th>Aksi</th></tr></thead>
       <tbody id="bus-tbody">
-        <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--c-text-grey)">
+        <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--c-text-grey)">
           <div class="loading-spinner" style="margin:0 auto 8px"></div>Memuat...
         </td></tr>
       </tbody>
@@ -73,10 +73,6 @@
             <input class="form-control" name="kode_bus" placeholder="BUS-01" required></div>
           <div class="form-group"><label class="form-label">Plat Nomor</label>
             <input class="form-control" name="plat_nomor" placeholder="AE 1234 XX" required></div>
-          <div class="form-group" style="grid-column:1/-1"><label class="form-label">Nama Bus</label>
-            <input class="form-control" name="nama" placeholder="Nama bus" required></div>
-          <div class="form-group"><label class="form-label">Kapasitas</label>
-            <input class="form-control" name="kapasitas" type="number" placeholder="30"></div>
           <div class="form-group"><label class="form-label">Status</label>
             <select class="form-control" name="status">
               <option value="aktif">Aktif</option>
@@ -155,10 +151,8 @@ async function loadBus(page = 1) {
       <td>${start + i + 1}</td>
       <td><span style="font-weight:700;color:var(--c-primary)">${b.kode_bus}</span></td>
       <td>${b.plat_nomor}</td>
-      <td>${b.nama ?? '-'}</td>
-      <td style="text-align:center">${b.kapasitas ?? '-'}</td>
       <td>${statusBadge(b.status)}</td>
-      <td><span class="badge ${b.gps_status === 'on' ? 'badge-green':'badge-grey'}">${b.gps_status === 'on' ? 'ON':'OFF'}</span></td>
+      <td><span class="badge ${b.gps_active ? 'badge-green':'badge-grey'}">${b.gps_active ? 'ON':'OFF'}</span></td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="btn btn-xs btn-outline" onclick="editBus(${b.id})">Edit</button>
@@ -194,15 +188,13 @@ async function editBus(id) {
   const f = document.getElementById('bus-form');
   f.kode_bus.value = b.kode_bus ?? '';
   f.plat_nomor.value = b.plat_nomor ?? '';
-  f.nama.value = b.nama ?? '';
-  f.kapasitas.value = b.kapasitas ?? '';
   f.status.value = b.status ?? 'aktif';
   openModal('bus-modal');
 }
 
 async function saveBus() {
   const f = document.getElementById('bus-form');
-  const body = { kode_bus: f.kode_bus.value, plat_nomor: f.plat_nomor.value, nama: f.nama.value, kapasitas: f.kapasitas.value, status: f.status.value };
+  const body = { kode_bus: f.kode_bus.value, plat_nomor: f.plat_nomor.value, status: f.status.value };
   const res = editId ? await api.put('/buses/' + editId, body) : await api.post('/buses', body);
   res.ok ? (toast('Bus berhasil disimpan'), closeModal('bus-modal'), loadBus(currentPage)) : toast(res.data?.message ?? 'Gagal', 'error');
 }
