@@ -13,14 +13,37 @@
     <span class="material-icons">search</span>
     <input type="text" id="search" placeholder="Cari kode bus, plat nomor..." oninput="debounce(loadBus,400)()">
   </div>
-  <select class="filter-select" id="filter-status" onchange="loadBus()">
-    <option value="">Semua Status</option>
-    <option value="aktif">Aktif</option>
-    <option value="maintenance">Perawatan</option>
-    <option value="non_aktif">Non-aktif</option>
-  </select>
   <button class="btn btn-icon" onclick="loadBus()"><span class="material-icons">refresh</span></button>
 </div>
+
+<div style="padding:12px 14px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--c-border)">
+  <button class="filter-btn active" data-filter="all" onclick="setBusFilter('all', this)">Semua</button>
+  <button class="filter-btn" data-filter="aktif" onclick="setBusFilter('aktif', this)">Aktif</button>
+  <button class="filter-btn" data-filter="maintenance" onclick="setBusFilter('maintenance', this)">Perawatan</button>
+  <button class="filter-btn" data-filter="non_aktif" onclick="setBusFilter('non_aktif', this)">Nonaktif</button>
+</div>
+
+<style>
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--c-border);
+  background: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-text-grey);
+  transition: all 200ms;
+}
+.filter-btn.active {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: white;
+}
+.filter-btn:hover {
+  border-color: var(--c-primary);
+}
+</style>
 
 <div class="card" style="padding:0">
   <div class="table-wrap">
@@ -95,24 +118,41 @@
 @endsection
 @push('scripts')
 <script>
-let editId = null, assignBusId = null, currentPage = 1;
+let editId = null, assignBusId = null, currentPage = 1, currentFilter = 'all';
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+function setBusFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadBus(1);
+}
 
 async function loadBus(page = 1) {
   currentPage = page;
   const q = document.getElementById('search').value;
-  const status = document.getElementById('filter-status').value;
-  const res = await api.get('/buses', { search: q, status, page, per_page: 15 });
-  const rows = res.data?.data ?? [];
-  const meta = res.data?.pagination;
+  const res = await api.get('/buses', { search: q, per_page: 1000 });
+  
+  let rows = res.data?.data ?? [];
+  
+  // Apply filter
+  if (currentFilter !== 'all') {
+    rows = rows.filter(b => b.status === currentFilter);
+  }
+  
   const tbody = document.getElementById('bus-tbody');
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">directions_bus</span><p>Tidak ada bus</p></div></td></tr>`;
     document.getElementById('bus-pagination').innerHTML = ''; return;
   }
-  tbody.innerHTML = rows.map((b, i) => `
+  
+  const perPage = 15;
+  const start = (page - 1) * perPage;
+  const paginatedRows = rows.slice(start, start + perPage);
+  
+  tbody.innerHTML = paginatedRows.map((b, i) => `
     <tr>
-      <td>${(page-1)*15+i+1}</td>
+      <td>${start + i + 1}</td>
       <td><span style="font-weight:700;color:var(--c-primary)">${b.kode_bus}</span></td>
       <td>${b.plat_nomor}</td>
       <td>${b.nama ?? '-'}</td>
@@ -127,7 +167,16 @@ async function loadBus(page = 1) {
         </div>
       </td>
     </tr>`).join('');
-  document.getElementById('bus-pagination').innerHTML = meta ? renderPagination(meta, p => loadBus(p)) : '';
+  
+  const totalPages = Math.ceil(rows.length / perPage);
+  const paginationHtml = totalPages > 1 ? `
+    <div style="display:flex;justify-content:center;gap:4px;padding:8px">
+      ${page > 1 ? `<button class="btn btn-sm btn-outline" onclick="loadBus(${page - 1})">← Sebelumnya</button>` : ''}
+      <span style="padding:8px 12px">Halaman ${page} dari ${totalPages}</span>
+      ${page < totalPages ? `<button class="btn btn-sm btn-outline" onclick="loadBus(${page + 1})">Berikutnya →</button>` : ''}
+    </div>
+  ` : '';
+  document.getElementById('bus-pagination').innerHTML = paginationHtml;
 }
 
 function openAddModal() {
