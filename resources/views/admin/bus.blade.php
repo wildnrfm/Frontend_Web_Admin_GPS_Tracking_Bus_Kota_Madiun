@@ -111,6 +111,41 @@
   </div>
 </div>
 
+{{-- Modal Route & Halte --}}
+<div class="modal-overlay" id="route-halte-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title">Rute & Halte - <span id="route-bus-name"></span></div>
+      <button class="modal-close" onclick="closeModal('route-halte-modal')"><span class="material-icons">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div id="route-content" style="max-height:400px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('route-halte-modal')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+{{-- Modal Siswa --}}
+<div class="modal-overlay" id="siswa-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title">Kelola Siswa - <span id="siswa-bus-name"></span></div>
+      <button class="modal-close" onclick="closeModal('siswa-modal')"><span class="material-icons">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" onclick="openAddSiswaForm()">+ Tambah Siswa</button>
+      </div>
+      <div id="siswa-content" style="max-height:400px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('siswa-modal')">Tutup</button>
+    </div>
+  </div>
+</div>
+
 @endsection
 @push('scripts')
 <script>
@@ -156,6 +191,8 @@ async function loadBus(page = 1) {
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="btn btn-xs btn-outline" onclick="editBus(${b.id})">Edit</button>
+          <button class="btn btn-xs" style="background:var(--c-primary);color:white" onclick="openRouteHalte(${b.id},'${b.kode_bus}')">Rute & Halte</button>
+          <button class="btn btn-xs" style="background:#E3F0FB;color:var(--c-primary)" onclick="openSiswa(${b.id},'${b.kode_bus}')">Siswa</button>
           <button class="btn btn-xs" style="background:#E3F0FB;color:var(--c-blue)" onclick="openAssign(${b.id})">Driver</button>
           <button class="btn btn-xs btn-icon" onclick="deleteBus(${b.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
         </div>
@@ -221,6 +258,101 @@ async function deleteBus(id) {
   confirmDialog('Hapus bus ini?', async () => {
     const r = await api.delete('/buses/' + id);
     r.ok ? (toast('Bus dihapus', 'warn'), loadBus(currentPage)) : toast(r.data?.message ?? 'Gagal', 'error');
+  });
+}
+
+// ──── Route & Halte ────
+let currentBusId = null;
+async function openRouteHalte(busId, busName) {
+  currentBusId = busId;
+  document.getElementById('route-bus-name').textContent = busName;
+  
+  // Get routes for this bus
+  const res = await api.get(`/buses/${busId}/route`);
+  const routes = res.data?.data ?? [];
+  
+  if (!routes.length) {
+    document.getElementById('route-content').innerHTML = `
+      <div class="empty-state">
+        <p style="color:var(--c-text-grey)">Belum ada rute untuk bus ini</p>
+      </div>
+    `;
+  } else {
+    let html = `<div style="display:flex;flex-direction:column;gap:12px">`;
+    for (const route of routes) {
+      html += `
+        <div style="border:1px solid var(--c-border);border-radius:8px;padding:12px">
+          <div style="font-weight:600;margin-bottom:8px">${route.nama_rute}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+            ${route.haltes?.map(h => `<span style="background:var(--c-bg-light);padding:4px 8px;border-radius:4px;font-size:12px">${h.nama_halte}</span>`).join('') || '<span style="color:var(--c-text-grey);font-size:12px">Belum ada halte</span>'}
+          </div>
+          <button class="btn btn-xs btn-outline" onclick="editRoute(${route.id})">Edit</button>
+          <button class="btn btn-xs btn-icon" onclick="deleteRoute(${route.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
+        </div>
+      `;
+    }
+    html += `</div>`;
+    document.getElementById('route-content').innerHTML = html;
+  }
+  
+  openModal('route-halte-modal');
+}
+
+async function editRoute(routeId) {
+  toast('Edit rute feature sedang dikembangkan', 'info');
+}
+
+async function deleteRoute(routeId) {
+  confirmDialog('Hapus rute ini?', async () => {
+    const r = await api.delete('/routes/' + routeId);
+    r.ok ? (toast('Rute dihapus'), openRouteHalte(currentBusId, 'Bus')) : toast(r.data?.message ?? 'Gagal', 'error');
+  });
+}
+
+// ──── Siswa ────
+async function openSiswa(busId, busName) {
+  currentBusId = busId;
+  document.getElementById('siswa-bus-name').textContent = busName;
+  
+  // Get students for this bus
+  const res = await api.get(`/buses/${busId}/students`);
+  const students = res.data?.data ?? [];
+  
+  if (!students.length) {
+    document.getElementById('siswa-content').innerHTML = `
+      <div class="empty-state">
+        <p style="color:var(--c-text-grey)">Belum ada siswa untuk bus ini</p>
+      </div>
+    `;
+  } else {
+    let html = `<div style="display:flex;flex-direction:column;gap:8px">`;
+    for (const siswa of students) {
+      html += `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--c-border);border-radius:6px">
+          <div>
+            <div style="font-weight:600;font-size:14px">${siswa.user?.name || siswa.name || 'N/A'}</div>
+            <div style="font-size:12px;color:var(--c-text-grey)">${siswa.user?.email || siswa.email || 'N/A'}</div>
+            ${siswa.halte_tujuan ? `<div style="font-size:12px;color:var(--c-text-grey)">Halte: ${siswa.halte_tujuan}</div>` : ''}
+          </div>
+          <button class="btn btn-xs btn-icon" onclick="removeSiswaFromBus(${siswa.id || siswa.student_id})"><span class="material-icons" style="font-size:14px;color:red">delete</span></button>
+        </div>
+      `;
+    }
+    html += `</div>`;
+    document.getElementById('siswa-content').innerHTML = html;
+  }
+  
+  openModal('siswa-modal');
+}
+
+async function openAddSiswaForm() {
+  toast('Fitur tambah siswa sedang dikembangkan', 'info');
+}
+
+async function removeSiswaFromBus(siswaId) {
+  confirmDialog('Hapus siswa dari bus ini?', async () => {
+    const r = await api.delete(`/buses/${currentBusId}/students/${siswaId}`);
+    r.ok ? (toast('Siswa dihapus dari bus'), openSiswa(currentBusId, 'Bus')) : toast(r.data?.message ?? 'Gagal', 'error');
   });
 }
 
