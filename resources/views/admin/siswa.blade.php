@@ -273,17 +273,17 @@ function applyClientFilter(rows) {
   if (currentFilter === 'all') return rows;
   
   return rows.filter(s => {
-    const userStatus = s.user?.status ?? 'active';
+    const isSuspended = s.is_suspended ?? false;
     const hasBus = (s.bus_id ?? 0) > 0;
     
     if (currentFilter === 'active') {
-      return userStatus === 'active' && hasBus;
+      return !isSuspended && hasBus;
     }
     if (currentFilter === 'no-bus') {
-      return userStatus === 'active' && !hasBus;
+      return !isSuspended && !hasBus;
     }
     if (currentFilter === 'inactive') {
-      return userStatus !== 'active';
+      return isSuspended;
     }
     return true;
   });
