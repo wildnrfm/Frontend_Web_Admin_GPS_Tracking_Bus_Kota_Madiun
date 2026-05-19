@@ -158,7 +158,7 @@ async function loadBus(page = 1) {
       <td>${b.nama ?? '-'}</td>
       <td style="text-align:center">${b.kapasitas ?? '-'}</td>
       <td>${statusBadge(b.status)}</td>
-      <td><span class="badge ${b.gps_active ? 'badge-green':'badge-grey'}">${b.gps_active ? 'ON':'OFF'}</span></td>
+      <td><span class="badge ${b.gps_status === 'on' ? 'badge-green':'badge-grey'}">${b.gps_status === 'on' ? 'ON':'OFF'}</span></td>
       <td>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <button class="btn btn-xs btn-outline" onclick="editBus(${b.id})">Edit</button>
