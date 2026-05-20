@@ -14,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.authenticated' => \App\Http\Middleware\AdminAuthenticated::class,
         ]);
+        
+        // Exclude specific routes from CSRF verification
+        $middleware->validateCsrfTokens(except: [
+            'upload-bus-photo',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

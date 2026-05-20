@@ -56,6 +56,11 @@ class ApiClient {
     const r = await fetch(this.base + path, { method: 'POST', headers, body: formData });
     return this._handle(r);
   }
+  async putForm(path, formData) {
+    const headers = { 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token };
+    const r = await fetch(this.base + path, { method: 'PUT', headers, body: formData });
+    return this._handle(r);
+  }
   async _handle(r, silent = false) {
     // Cek content-type: kalau Laravel return HTML (bukan JSON), jangan redirect
     const ct = r.headers.get('content-type') ?? '';
@@ -100,7 +105,9 @@ function toast(msg, type = 'success') {
 function openModal(id) { document.getElementById(id)?.classList.add('open'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
 document.addEventListener('click', e => {
-  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+  if (e.target.classList.contains('modal-overlay') && !e.target.dataset.noClose) {
+    e.target.classList.remove('open');
+  }
 });
 
 /* ── Confirm dialog ─────────────────────────────────────────────── */
