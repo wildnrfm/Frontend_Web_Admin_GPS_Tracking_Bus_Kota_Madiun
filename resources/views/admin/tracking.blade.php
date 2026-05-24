@@ -101,6 +101,11 @@
 // ── MAP INIT ─────────────────────────────────────────────────────
 let tMap, busMarkers = {}, routePolyline = null, routePoints = [], routeMarkers = [];
 let sseSource = null, routeEditorActive = false, selectedBusForRoute = null;
+let sseReconnectDelay = 1000;
+let sseReconnectTimer = null;
+let fallbackPollTimer = null;
+let useFallback = false;
+let prevTrackStatus = {}; // untuk deteksi perubahan GPS status di tracking page
 
 document.addEventListener('DOMContentLoaded', () => {
   tMap = L.map('tracking-map', { attributionControl: false });
@@ -112,46 +117,149 @@ document.addEventListener('DOMContentLoaded', () => {
   startSSE();
 });
 
-// ── SSE GPS STREAM ────────────────────────────────────────────────
-function startSSE() {
-  const token = document.querySelector('meta[name="admin-token"]').content;
-  const dot = document.getElementById('sse-dot');
-  const label = document.getElementById('sse-label');
-
-  // SSE endpoint — token di query param karena EventSource tdk support custom headers
-  // Jika SSE gagal, fallback ke polling tiap 5 detik
-  let sseWorking = false;
-  try {
-    if (sseSource) { sseSource.close(); }
-    // Kita coba SSE via fetch streaming; jika gagal gunakan polling
-    fallbackPolling();
-  } catch(e) {
-    fallbackPolling();
+// ── GPS Toast (pakai fungsi global dari app.blade.php jika ada) ───
+function showTrackingToast(driverName, status, busCode) {
+  if (typeof showGpsToast === 'function') {
+    showGpsToast(driverName, status, busCode);
+    return;
+  }
+  // Fallback: pakai toast bawaan admin jika ada
+  if (typeof toast === 'function') {
+    const msg = status === 'on'
+      ? `Driver ${driverName} mengaktifkan GPS (${busCode})`
+      : `Driver ${driverName} mematikan GPS (${busCode})`;
+    toast(msg, status === 'on' ? 'success' : 'warn');
   }
 }
 
-async function fallbackPolling() {
-  const dot = document.getElementById('sse-dot');
+// ── SSE GPS STREAM ────────────────────────────────────────────────
+function setConnStatus(color, text) {
+  const dot   = document.getElementById('sse-dot');
   const label = document.getElementById('sse-label');
-  dot.style.background = '#4CAF50'; label.textContent = 'Live';
-  await pollGPS();
-  setInterval(pollGPS, 5000);
+  if (dot)   dot.style.background = color;
+  if (label) label.textContent = text;
+}
+
+function startSSE() {
+  const token = window.adminToken || document.querySelector('meta[name="admin-token"]')?.content;
+  if (!token) { startFallback(); return; }
+
+  const baseUrl = window.apiBaseUrl || '/api';
+  const url = baseUrl + '/gps-tracks/stream?token=' + encodeURIComponent(token);
+
+  if (sseSource) { sseSource.close(); sseSource = null; }
+
+  setConnStatus('#FF9800', 'Menghubungkan...');
+
+  try {
+    sseSource = new EventSource(url);
+
+    sseSource.addEventListener('gps_update', function(e) {
+      sseReconnectDelay = 1000; // reset
+      useFallback = false;
+      setConnStatus('#4CAF50', 'Live');
+
+      try {
+        const data  = JSON.parse(e.data);
+        const buses = data.buses ?? data;
+
+        // Deteksi perubahan GPS status → toast
+        if (Array.isArray(buses)) {
+          buses.forEach(b => {
+            const prev = prevTrackStatus[b.bus_id];
+            const curr = b.gps_status;
+            if (prev !== undefined && prev !== curr) {
+              showTrackingToast(b.driver_name || '—', curr, b.bus_code || '');
+            }
+            prevTrackStatus[b.bus_id] = curr;
+          });
+        }
+
+        const mapped = (Array.isArray(buses) ? buses : []).map(b => ({
+          bus_id:      b.bus_id,
+          bus_code:    b.bus_code,
+          bus_plate:   b.bus_plate,
+          photo_url:   b.photo_url,
+          gps_status:  b.gps_status,
+          driver_name: b.driver_name ?? b.driver?.name ?? '',
+          position:    b.position ?? b.current_position,
+        }));
+        updateBusMarkers(mapped);
+      } catch(err) { /* ignore */ }
+    });
+
+    sseSource.addEventListener('ping', function(e) {
+      setConnStatus('#4CAF50', 'Live');
+      sseReconnectDelay = 1000;
+    });
+
+    sseSource.addEventListener('close', function(e) {
+      sseSource.close();
+      scheduleReconnect();
+    });
+
+    sseSource.onerror = function() {
+      sseSource.close();
+      sseSource = null;
+      if (sseReconnectDelay >= 8000) {
+        startFallback();
+      } else {
+        scheduleReconnect();
+      }
+    };
+
+    // Stop fallback polling jika SSE berhasil
+    if (fallbackPollTimer) { clearInterval(fallbackPollTimer); fallbackPollTimer = null; }
+
+  } catch(e) {
+    startFallback();
+  }
+}
+
+function scheduleReconnect() {
+  setConnStatus('#FF9800', 'Reconnecting...');
+  if (sseReconnectTimer) clearTimeout(sseReconnectTimer);
+  sseReconnectTimer = setTimeout(() => {
+    sseReconnectDelay = Math.min(sseReconnectDelay * 2, 30000);
+    startSSE();
+  }, sseReconnectDelay);
+}
+
+function startFallback() {
+  if (useFallback) return;
+  useFallback = true;
+  setConnStatus('#FF9800', 'Polling');
+  pollGPS();
+  fallbackPollTimer = setInterval(pollGPS, 3000);
 }
 
 async function pollGPS() {
   try {
     const res = await api.get('/gps-tracks/dashboard');
-    const buses = res.data?.data?.data ?? [];
+    const buses = res.data?.data?.data ?? res.data?.data ?? [];
+
+    // Deteksi perubahan untuk fallback polling juga
+    buses.forEach(b => {
+      const prev = prevTrackStatus[b.bus_id];
+      const curr = b.gps_status;
+      if (prev !== undefined && prev !== curr) {
+        showTrackingToast(b.driver?.name ?? b.driver_name ?? '—', curr, b.bus_code || '');
+      }
+      prevTrackStatus[b.bus_id] = curr;
+    });
+
     const mapped = buses.map(b => ({
-      bus_id: b.bus_id, bus_code: b.bus_code, bus_plate: b.bus_plate,
-      gps_status: b.gps_status, driver_name: b.driver?.name ?? '',
-      position: b.current_position
+      bus_id:      b.bus_id,
+      bus_code:    b.bus_code,
+      bus_plate:   b.bus_plate,
+      photo_url:   b.photo_url,
+      gps_status:  b.gps_status,
+      driver_name: b.driver?.name ?? '',
+      position:    b.current_position,
     }));
     updateBusMarkers(mapped);
   } catch(e) {
-    const dot = document.getElementById('sse-dot');
-    const label = document.getElementById('sse-label');
-    dot.style.background = '#F44336'; label.textContent = 'Error';
+    setConnStatus('#F44336', 'Error');
   }
 }
 
@@ -164,34 +272,59 @@ function updateBusMarkers(buses) {
     if (!active.find(b => b.bus_id == id)) { tMap.removeLayer(busMarkers[id]); delete busMarkers[id]; }
   });
 
-  let listHtml = '';
-  active.forEach(b => {
-    const pos = b.position;
-    const ll = [pos.latitude, pos.longitude];
-    const icon = L.divIcon({
-      html: `<div style="background:var(--c-primary);color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.3)">🚌</div>`,
-      iconSize: [34, 34], iconAnchor: [17, 17], className: ''
-    });
-    if (busMarkers[b.bus_id]) busMarkers[b.bus_id].setLatLng(ll);
-    else busMarkers[b.bus_id] = L.marker(ll, { icon }).addTo(tMap)
-      .bindPopup(`<b>${b.bus_code}</b><br>${b.bus_plate}<br>Driver: ${b.driver_name || '-'}<br>${(pos.speed||0).toFixed(0)} km/h`);
-
-    listHtml += `<div class="bus-item" onclick="focusBus(${b.bus_id})">
-      <div class="bus-icon-wrap" style="background:var(--c-primary-light)">
-        <span class="material-icons" style="color:var(--c-primary);font-size:18px">directions_bus</span>
-      </div>
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:13px">${b.bus_code}</div>
-        <div style="font-size:11px;color:var(--c-text-grey)">${b.driver_name || '-'}</div>
-      </div>
-      <div style="text-align:right">
-        <span class="live-badge">LIVE</span>
-        <div style="font-size:12px;font-weight:600;margin-top:2px">${(pos.speed||0).toFixed(0)} km/h</div>
-      </div>
-    </div>`;
+  // Urutkan bus: Aktif (ON) dulu, baru Offline (OFF)
+  const sortedBuses = [...buses].sort((a, b) => {
+    const aOn = a.gps_status === 'on' ? 1 : 0;
+    const bOn = b.gps_status === 'on' ? 1 : 0;
+    return bOn - aOn; // 1 (aktif) di atas, 0 (offline) di bawah
   });
 
-  if (!active.length) listHtml = `<div class="empty-state" style="padding:24px"><span class="material-icons">directions_bus</span><p>Belum ada bus beroperasi</p></div>`;
+  let listHtml = '';
+  sortedBuses.forEach(b => {
+    const isOn = b.gps_status === 'on';
+    const busPhotoHtml = b.photo_url 
+      ? `<img src="${proxyImgUrl(b.photo_url)}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0" alt="${b.bus_code}">`
+      : `<div class="bus-icon-wrap" style="background:${isOn ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'}">
+          <span class="material-icons" style="color:${isOn ? '#4CAF50' : '#F44336'};font-size:18px">directions_bus</span>
+        </div>`;
+
+    if (isOn && b.position) {
+      const pos = b.position;
+      const ll = [pos.latitude, pos.longitude];
+      const icon = L.divIcon({
+        html: `<div style="background:#4CAF50;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.3);border:2px solid #fff">🚌</div>`,
+        iconSize: [34, 34], iconAnchor: [17, 17], className: ''
+      });
+      if (busMarkers[b.bus_id]) busMarkers[b.bus_id].setLatLng(ll);
+      else busMarkers[b.bus_id] = L.marker(ll, { icon }).addTo(tMap)
+        .bindPopup(`<b>${b.bus_code}</b><br>${b.bus_plate}<br>Driver: ${b.driver_name || '-'}<br>${(pos.speed||0).toFixed(0)} km/h`);
+
+      listHtml += `<div class="bus-item" onclick="focusBus(${b.bus_id})" style="border-left: 4px solid #4CAF50; margin-bottom: 6px; cursor: pointer;">
+        ${busPhotoHtml}
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${b.bus_code}</div>
+          <div style="font-size:11px;color:var(--c-text-grey)">${b.driver_name || '-'}</div>
+        </div>
+        <div style="text-align:right">
+          <span class="live-badge" style="background:#4CAF50">LIVE</span>
+          <div style="font-size:12px;font-weight:600;margin-top:2px">${(pos.speed||0).toFixed(0)} km/h</div>
+        </div>
+      </div>`;
+    } else {
+      listHtml += `<div class="bus-item" style="border-left: 4px solid #F44336; margin-bottom: 6px; opacity: 0.75; cursor: default;">
+        ${busPhotoHtml}
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px;color:var(--c-text-grey)">${b.bus_code}</div>
+          <div style="font-size:11px;color:var(--c-text-grey)">${b.driver_name || '-'}</div>
+        </div>
+        <div style="text-align:right">
+          <span class="live-badge" style="background:#F44336">OFFLINE</span>
+        </div>
+      </div>`;
+    }
+  });
+
+  if (!sortedBuses.length) listHtml = `<div class="empty-state" style="padding:24px"><span class="material-icons">directions_bus</span><p>Belum ada bus beroperasi</p></div>`;
   document.getElementById('tracking-bus-list').innerHTML = listHtml;
 }
 
@@ -291,5 +424,7 @@ async function saveRoute() {
   }
   res?.ok ? toast('Rute berhasil disimpan') : toast(res?.data?.message ?? 'Gagal simpan rute', 'error');
 }
+
+
 </script>
 @endpush

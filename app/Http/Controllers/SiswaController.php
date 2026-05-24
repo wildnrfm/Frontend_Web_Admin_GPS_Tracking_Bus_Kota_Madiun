@@ -53,6 +53,7 @@ class SiswaController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users',
                 'phone' => 'required|string|max:20',
+                'kelas' => 'nullable|string|max:100',
                 'address' => 'required|string',
                 'school' => 'required|string',
                 'password' => 'required|string|min:8|confirmed',
@@ -106,6 +107,7 @@ class SiswaController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|email',
                 'phone' => 'required|string|max:20',
+                'kelas' => 'nullable|string|max:100',
                 'address' => 'required|string',
                 'school' => 'required|string',
             ]);

@@ -61,6 +61,83 @@
 .urutan-item:active { opacity: 0.7; cursor: grabbing; }
 .urutan-item[draggable]:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Premium Photo Upload & Preview UI ── */
+.photo-upload-zone {
+  border: 2.5px dashed #abb8b0;
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 194px;
+  box-sizing: border-box;
+}
+.photo-upload-zone:hover {
+  border-color: var(--c-primary);
+  background: var(--c-primary-light);
+}
+.photo-upload-zone .material-icons {
+  font-size: 32px;
+  color: var(--c-primary);
+  transition: transform 0.2s ease;
+}
+.photo-upload-zone:hover .material-icons {
+  transform: translateY(-3px);
+}
+.photo-upload-zone p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text-dark);
+}
+.photo-upload-zone span {
+  font-size: 10.5px;
+  color: var(--c-text-grey);
+  line-height: 1.3;
+}
+.preview-container {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid var(--c-border);
+  height: 194px;
+  background: #f9fafb;
+  box-sizing: border-box;
+}
+.preview-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.preview-container .remove-preview-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(211, 47, 47, 0.9);
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.preview-container .remove-preview-btn:hover {
+  background: rgba(211, 47, 47, 1);
+  transform: scale(1.1);
+}
 </style>
 
 <div class="card" style="padding:0">
@@ -79,37 +156,72 @@
 
 {{-- Modal Bus --}}
 <div class="modal-overlay" id="bus-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="bus-modal-title">Tambah Bus</div>
+  <div class="modal" style="max-width:580px; border-radius:16px; overflow:hidden;">
+    <div class="modal-header" style="background:#f8faf9; border-bottom:1px solid #eef2f0; padding:18px 24px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:40px; height:40px; border-radius:10px; background:var(--c-primary-light); color:var(--c-primary); display:flex; align-items:center; justify-content:center;">
+          <span class="material-icons">directions_bus</span>
+        </div>
+        <div>
+          <div class="modal-title" id="bus-modal-title" style="font-weight:700; font-size:16px; color:var(--c-text-dark); margin:0;">Tambah Bus</div>
+          <div style="font-size:11px; color:var(--c-text-grey); margin-top:2px;">Lengkapi informasi detail armada bus sekolah</div>
+        </div>
+      </div>
       <button class="modal-close" onclick="closeModal('bus-modal')"><span class="material-icons">close</span></button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body" style="padding:24px;">
       <form id="bus-form">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
-          <div class="form-group"><label class="form-label">Kode Bus</label>
-            <input class="form-control" name="kode_bus" placeholder="BUS-01" required></div>
-          <div class="form-group"><label class="form-label">Plat Nomor</label>
-            <input class="form-control" name="plat_nomor" placeholder="AE 1234 XX" required></div>
-          <div class="form-group"><label class="form-label">Status</label>
-            <select class="form-control" name="status">
-              <option value="aktif">Aktif</option>
-              <option value="maintenance">Perawatan</option>
-              <option value="non_aktif">Non-aktif</option>
-            </select>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start;">
+          
+          <!-- Kiri: Inputs -->
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" style="font-weight:600; color:var(--c-text-dark)">Kode Bus</label>
+              <input class="form-control" name="kode_bus" placeholder="Contoh: BUS-01" required style="border-radius:10px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" style="font-weight:600; color:var(--c-text-dark)">Plat Nomor</label>
+              <input class="form-control" name="plat_nomor" placeholder="Contoh: AE 1234 XX" required style="border-radius:10px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label" style="font-weight:600; color:var(--c-text-dark)">Status Operasional</label>
+              <select class="form-control" name="status" style="border-radius:10px; cursor:pointer;">
+                <option value="aktif">🟢 Aktif</option>
+                <option value="maintenance">🟡 Perawatan</option>
+                <option value="non_aktif">🔴 Non-aktif</option>
+              </select>
+            </div>
           </div>
-          <div class="form-group"><label class="form-label">Foto Bus</label>
-            <input class="form-control" type="file" name="photo" accept="image/*"></div>
-        </div>
-        <div id="bus-photo-preview" style="margin-top:12px;display:none">
-          <label class="form-label">Preview Foto</label>
-          <img id="bus-photo-img" src="" style="width:100%;max-width:200px;height:auto;border-radius:8px;object-fit:cover">
+          
+          <!-- Kanan: Upload Foto -->
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <label class="form-label" style="font-weight:600; color:var(--c-text-dark)">Foto Bus</label>
+            
+            <div class="photo-upload-zone" id="bus-photo-upload-zone" onclick="document.getElementById('bus-photo-input').click()">
+              <span class="material-icons">add_a_photo</span>
+              <p>Pilih Foto Bus</p>
+              <span>Format JPG/PNG, maks 2MB</span>
+            </div>
+            <input type="file" id="bus-photo-input" name="photo" accept="image/*" style="display:none">
+            
+            <div id="bus-photo-preview" style="display:none">
+              <div class="preview-container">
+                <img id="bus-photo-img" src="" alt="Preview">
+                <button type="button" class="remove-preview-btn" onclick="removePhotoSelection(event)" title="Hapus foto">
+                  <span class="material-icons" style="font-size:16px">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
         </div>
       </form>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('bus-modal')">Batal</button>
-      <button class="btn btn-primary btn-sm" onclick="saveBus()">Simpan</button>
+    <div class="modal-footer" style="background:#f8faf9; border-top:1px solid #eef2f0; padding:16px 24px; display:flex; justify-content:flex-end; gap:12px;">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('bus-modal')" style="border-radius:8px;">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveBus()" style="border-radius:8px; background:var(--c-primary); border-color:var(--c-primary);">Simpan</button>
     </div>
   </div>
 </div>
@@ -337,7 +449,7 @@ async function loadBus(page = 1) {
   tbody.innerHTML = paginatedRows.map((b, i) => `
     <tr>
       <td style="width:80px">
-        ${b.photo_url ? `<img src="${b.photo_url}?t=${Date.now()}" style="width:60px;height:60px;object-fit:cover;border-radius:6px" alt="${b.kode_bus}">` : `<div style="width:60px;height:60px;background:#f0f0f0;border-radius:6px;display:flex;align-items:center;justify-content:center"><span class="material-icons" style="color:#ccc">image</span></div>`}
+        ${b.photo_url ? `<img src="${proxyImgUrl(b.photo_url)}" style="width:60px;height:60px;object-fit:cover;border-radius:6px" alt="${b.kode_bus}">` : `<div style="width:60px;height:60px;background:#f0f0f0;border-radius:6px;display:flex;align-items:center;justify-content:center"><span class="material-icons" style="color:#ccc">image</span></div>`}
       </td>
       <td><span style="font-weight:700;color:var(--c-primary)">${b.kode_bus}</span></td>
       <td>${b.plat_nomor}</td>
@@ -365,11 +477,20 @@ async function loadBus(page = 1) {
   document.getElementById('bus-pagination').innerHTML = paginationHtml;
 }
 
+function removePhotoSelection(e) {
+  if (e) e.stopPropagation();
+  const input = document.getElementById('bus-photo-input');
+  if (input) input.value = '';
+  document.getElementById('bus-photo-img').src = '';
+  document.getElementById('bus-photo-preview').style.display = 'none';
+  document.getElementById('bus-photo-upload-zone').style.display = 'flex';
+}
+
 function openAddModal() {
   editId = null;
   document.getElementById('bus-modal-title').textContent = 'Tambah Bus';
   document.getElementById('bus-form').reset();
-  document.getElementById('bus-photo-preview').style.display = 'none';
+  removePhotoSelection();
   openModal('bus-modal');
 }
 
@@ -385,10 +506,11 @@ async function editBus(id) {
   
   // Show photo preview if exists
   if (b.photo_url) {
-    document.getElementById('bus-photo-img').src = b.photo_url + '?t=' + Date.now();
+    document.getElementById('bus-photo-img').src = proxyImgUrl(b.photo_url);
     document.getElementById('bus-photo-preview').style.display = 'block';
+    document.getElementById('bus-photo-upload-zone').style.display = 'none';
   } else {
-    document.getElementById('bus-photo-preview').style.display = 'none';
+    removePhotoSelection();
   }
   openModal('bus-modal');
 }
@@ -958,7 +1080,7 @@ async function removeSiswaFromBus(siswaId) {
 
 // Photo preview handler
 document.addEventListener('DOMContentLoaded', function() {
-  const photoInput = document.querySelector('input[name="photo"]');
+  const photoInput = document.getElementById('bus-photo-input');
   if (photoInput) {
     photoInput.addEventListener('change', function(e) {
       if (e.target.files.length > 0) {
@@ -967,6 +1089,7 @@ document.addEventListener('DOMContentLoaded', function() {
         reader.onload = function(event) {
           document.getElementById('bus-photo-img').src = event.target.result;
           document.getElementById('bus-photo-preview').style.display = 'block';
+          document.getElementById('bus-photo-upload-zone').style.display = 'none';
         };
         reader.readAsDataURL(file);
       }

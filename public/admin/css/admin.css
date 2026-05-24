@@ -773,7 +773,7 @@ tbody tr:hover {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 1050;
   background: rgba(0, 0, 0, .45);
   align-items: center;
   justify-content: center;

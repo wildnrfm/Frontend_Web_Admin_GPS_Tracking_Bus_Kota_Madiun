@@ -10,6 +10,8 @@ use App\Http\Controllers\HalteController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AnalitikController;
 use App\Http\Controllers\TrackingController;
+use App\Http\Controllers\ApiProxyController;
+use App\Http\Controllers\AdminController;
 
 // ========== Public Routes (No Authentication Required) ==========
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -30,9 +32,9 @@ Route::middleware(['web', 'admin.authenticated'])->group(function () {
     Route::get('/analitik', [AnalitikController::class, 'index'])->name('admin.analitik');
     Route::get('/analitik/export', [AnalitikController::class, 'export'])->name('admin.analitik.export');
 
-    // Pending (redirect to siswa)
+    // Pending Approvals Halaman Mandiri
     Route::get('/pending', function() {
-        return redirect()->route('admin.siswa');
+        return view('admin.pending');
     })->name('admin.pending');
 
     // Siswa Management
@@ -81,11 +83,30 @@ Route::middleware(['web', 'admin.authenticated'])->group(function () {
         Route::delete('/{id}', [HalteController::class, 'destroy'])->name('.destroy');
     });
 
+    // Admin Management (Other Admins)
+    Route::prefix('admins')->name('admin.admins')->group(function () {
+        Route::get('', [AdminController::class, 'index'])->name('');
+    });
+
     // Profile & Settings
     Route::get('/profil', [ProfileController::class, 'index'])->name('admin.profil');
     Route::get('/profil/edit', [ProfileController::class, 'edit'])->name('admin.profil.edit');
     Route::put('/profil', [ProfileController::class, 'update'])->name('admin.profil.update');
 });
+
+// ── API Proxy ─────────────────────────────────────────────────────────
+// Browser memanggil /api-proxy/* (same origin, tanpa CORS).
+// Controller meneruskan request ke API_BASE_URL (server-to-server).
+Route::any('api-proxy/{path}', [ApiProxyController::class, 'proxy'])
+    ->where('path', '.*')
+    ->middleware('admin.authenticated');
+
+// ── Storage Proxy ──────────────────────────────────────────────────────
+// Browser memanggil /storage-proxy/storage/buses/photo.jpg
+// Controller fetch gambar dari API server lalu stream ke browser.
+// Tidak perlu auth — gambar bisa diakses publik.
+Route::get('storage-proxy/{path}', [ApiProxyController::class, 'storageProxy'])
+    ->where('path', '.*');
 
 // Catch-all: redirect to dashboard if logged in, login if not
 Route::get('/{any}', function () {

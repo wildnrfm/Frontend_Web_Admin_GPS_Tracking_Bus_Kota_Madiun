@@ -40,6 +40,7 @@
       <a href="{{ route('admin.driver') }}"   class="topbar-dd-item"><span class="material-icons">badge</span>Driver</a>
       <a href="{{ route('admin.halte') }}"    class="topbar-dd-item"><span class="material-icons">place</span>Halte</a>
       <a href="{{ route('admin.pending') }}"  class="topbar-dd-item"><span class="material-icons">pending_actions</span>Persetujuan</a>
+      <a href="{{ route('admin.admins') }}"   class="topbar-dd-item"><span class="material-icons">admin_panel_settings</span>Admin</a>
       <a href="{{ route('admin.tracking') }}" class="topbar-dd-item"><span class="material-icons">gps_fixed</span>Live Tracking</a>
       <div style="border-top:1px solid var(--c-divider);margin:6px 0"></div>
       <a href="{{ route('admin.profil') }}"   class="topbar-dd-item"><span class="material-icons">person</span>Profil</a>
@@ -91,8 +92,92 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{{ asset('admin/js/admin.js') }}"></script>
 <script>
+  window.apiBaseUrl = '{{ env('API_BASE_URL', url('/api')) }}';
+  window.adminToken = '{{ session('api_token') }}';
+</script>
+<script src="{{ asset('admin/js/admin.js') }}"></script>
+
+{{-- ── Global Toast Notification Container ───────────────────── --}}
+<div id="gps-toast-container" style="
+  position:fixed;top:72px;right:16px;z-index:9999;
+  display:flex;flex-direction:column;gap:8px;
+  pointer-events:none;max-width:320px;
+"></div>
+<style>
+.gps-toast {
+  display:flex;align-items:flex-start;gap:10px;
+  background:#1e2329;color:#fff;
+  border-radius:12px;padding:12px 14px;
+  box-shadow:0 4px 24px rgba(0,0,0,.35);
+  font-size:13px;line-height:1.4;
+  pointer-events:all;
+  animation:gpsToastIn .3s cubic-bezier(.34,1.2,.64,1) both;
+  border-left:4px solid #4CAF50;
+  max-width:320px;
+}
+.gps-toast.gps-off  { border-left-color:#F44336; }
+.gps-toast.gps-warn { border-left-color:#FF9800; }
+.gps-toast-icon {
+  font-size:18px;flex-shrink:0;margin-top:1px;
+}
+.gps-toast-body { flex:1; }
+.gps-toast-title { font-weight:700;font-size:12px;opacity:.7;margin-bottom:2px; }
+.gps-toast-msg   { font-weight:500; }
+.gps-toast-time  { font-size:11px;opacity:.5;margin-top:3px; }
+.gps-toast-close {
+  background:none;border:none;color:rgba(255,255,255,.5);
+  cursor:pointer;font-size:16px;padding:0;line-height:1;
+  flex-shrink:0;
+}
+.gps-toast-close:hover { color:#fff; }
+@keyframes gpsToastIn {
+  from { opacity:0;transform:translateX(100%); }
+  to   { opacity:1;transform:translateX(0); }
+}
+@keyframes gpsToastOut {
+  from { opacity:1;transform:translateX(0); }
+  to   { opacity:0;transform:translateX(100%); }
+}
+.gps-toast.removing {
+  animation:gpsToastOut .25s ease both;
+}
+</style>
+<script>
+// ── Global GPS Toast Notification Function ────────────────────────
+window.showGpsToast = function(driverName, status, busCode) {
+  const container = document.getElementById('gps-toast-container');
+  if (!container) return;
+
+  const isOn = status === 'on';
+  const icon = isOn ? '📡' : '📵';
+  const title = isOn ? 'GPS DIAKTIFKAN' : 'GPS DIMATIKAN';
+  const msg = isOn
+    ? `Driver <b>${driverName || '—'}</b> telah <b style="color:#4CAF50">mengaktifkan GPS</b>${busCode ? ' (' + busCode + ')' : ''}`
+    : `Driver <b>${driverName || '—'}</b> telah <b style="color:#F44336">mematikan GPS</b>${busCode ? ' (' + busCode + ')' : ''}`;
+  const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  const el = document.createElement('div');
+  el.className = 'gps-toast' + (isOn ? '' : ' gps-off');
+  el.innerHTML = `
+    <span class="gps-toast-icon">${icon}</span>
+    <div class="gps-toast-body">
+      <div class="gps-toast-title">${title}</div>
+      <div class="gps-toast-msg">${msg}</div>
+      <div class="gps-toast-time">${now}</div>
+    </div>
+    <button class="gps-toast-close" onclick="this.closest('.gps-toast').remove()">✕</button>
+  `;
+  container.appendChild(el);
+
+  // Auto-remove setelah 6 detik
+  setTimeout(() => {
+    if (!el.parentNode) return;
+    el.classList.add('removing');
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  }, 6000);
+};
+
 // ── Topbar dropdown ─────────────────────────────────────────────
 const _userBtn  = document.getElementById('topbar-user-btn');
 const _dropdown = document.getElementById('topbar-dropdown');

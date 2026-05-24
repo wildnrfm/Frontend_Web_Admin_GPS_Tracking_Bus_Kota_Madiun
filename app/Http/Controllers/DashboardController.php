@@ -18,6 +18,7 @@ class DashboardController extends Controller
             'total_students' => 0,
             'total_drivers' => 0,
             'total_haltes' => 0,
+            'total_admins' => 0,
             'pending_count' => 0,
         ];
 
@@ -51,6 +52,13 @@ class DashboardController extends Controller
             \Log::info('Haltes response:', $haltesData ?? []);
             if ($haltesData && isset($haltesData['pagination'])) {
                 $stats['total_haltes'] = $haltesData['pagination']['total'] ?? 0;
+            }
+
+            // Fetch total admins
+            $adminsData = ApiClient::get('/admins', ['per_page' => 1])->json();
+            \Log::info('Admins response:', $adminsData ?? []);
+            if ($adminsData && isset($adminsData['pagination'])) {
+                $stats['total_admins'] = $adminsData['pagination']['total'] ?? 0;
             }
 
             // Fetch pending students count

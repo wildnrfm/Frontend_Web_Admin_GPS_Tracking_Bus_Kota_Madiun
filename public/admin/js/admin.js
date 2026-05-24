@@ -25,43 +25,102 @@ function debugLog(msg) {
 
 class ApiClient {
   constructor() {
-    // Point to actual API server at port 8000
-    this.base = 'http://localhost:8000/api';
+    // Selalu gunakan proxy endpoint di web admin sendiri.
+    // Browser → /api-proxy/* (same origin, no CORS)
+    // Web admin backend → API_BASE_URL (server-to-server, no CORS)
+    this.base = '/api-proxy';
     this.token = document.querySelector('meta[name="admin-token"]')?.content ?? '';
+    this.isRefreshing = false;
+    this.refreshPromise = null;
     debugLog(`[DEBUG] ApiClient initialized with token: ${this.token ? this.token.substring(0,20) + '...' : '(empty)'}`);
   }
   headers() {
-    return { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token };
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer ' + this.token,
+    };
   }
   async get(path, params = {}, silent = false) {
     const url = new URL(this.base + path, location.origin);
     Object.entries(params).forEach(([k, v]) => v !== '' && url.searchParams.set(k, v));
     const r = await fetch(url, { headers: this.headers() });
-    return this._handle(r, silent);
+    return this._handle(r, silent, path, 'get', params);
   }
   async post(path, body = {}) {
     const r = await fetch(this.base + path, { method: 'POST', headers: this.headers(), body: JSON.stringify(body) });
-    return this._handle(r);
+    return this._handle(r, false, path, 'post', body);
   }
   async put(path, body = {}) {
     const r = await fetch(this.base + path, { method: 'PUT', headers: this.headers(), body: JSON.stringify(body) });
-    return this._handle(r);
+    return this._handle(r, false, path, 'put', body);
+  }
+  async patch(path, body = {}) {
+    const r = await fetch(this.base + path, { method: 'PATCH', headers: this.headers(), body: JSON.stringify(body) });
+    return this._handle(r, false, path, 'patch', body);
   }
   async delete(path) {
     const r = await fetch(this.base + path, { method: 'DELETE', headers: this.headers() });
-    return this._handle(r);
+    return this._handle(r, false, path, 'delete');
   }
   async postForm(path, formData) {
-    const headers = { 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token };
+    const headers = {
+      'Accept': 'application/json',
+      'Authorization': 'Bearer ' + this.token,
+    };
     const r = await fetch(this.base + path, { method: 'POST', headers, body: formData });
-    return this._handle(r);
+    return this._handle(r, false, path, 'postForm', formData);
   }
   async putForm(path, formData) {
-    const headers = { 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token };
+    const headers = {
+      'Accept': 'application/json',
+      'Authorization': 'Bearer ' + this.token,
+    };
     const r = await fetch(this.base + path, { method: 'PUT', headers, body: formData });
-    return this._handle(r);
+    return this._handle(r, false, path, 'putForm', formData);
   }
-  async _handle(r, silent = false) {
+
+  // Refresh token endpoint — extend token expiration
+  async refreshToken() {
+    try {
+      debugLog(`[DEBUG] Attempting to refresh token...`);
+      const headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + this.token,
+      };
+      const r = await fetch(this.base + '/auth/refresh', { 
+        method: 'POST', 
+        headers, 
+        body: JSON.stringify({}) 
+      });
+      const ct = r.headers.get('content-type') ?? '';
+      let data = {};
+      const rawText = await r.clone().text();
+      try { 
+        data = ct.includes('json') ? JSON.parse(rawText) : {}; 
+      } catch (e) {
+        debugLog(`[ERROR] JSON parse failed during refresh: ${e.message}`);
+        return false;
+      }
+
+      if (r.status === 200 && data?.data?.token) {
+        // Update token di memory dan di meta tag
+        this.token = data.data.token;
+        document.querySelector('meta[name="admin-token"]')?.setAttribute('content', this.token);
+        debugLog(`[DEBUG] Token refreshed successfully. New token: ${this.token.substring(0,20)}...`);
+        return true;
+      } else {
+        debugLog(`[DEBUG] Token refresh failed: status=${r.status}`);
+        return false;
+      }
+    } catch (e) {
+      debugLog(`[ERROR] Token refresh error: ${e.message}`);
+      return false;
+    }
+  }
+
+  async _handle(r, silent = false, path = '', method = '', params = null) {
     // Cek content-type: kalau Laravel return HTML (bukan JSON), jangan redirect
     const ct = r.headers.get('content-type') ?? '';
     let data;
@@ -73,16 +132,71 @@ class ApiClient {
       debugLog(`[DEBUG] Raw response (first 300 chars): ${rawText.substring(0, 300)}`);
       data = {}; 
     }
-    debugLog(`[DEBUG] API Response: status=${r.status}, ct=${ct}, dataKeys=${Object.keys(data).join(',')} rawLen=${rawText.length}`);
-    // Redirect ke login hanya jika: 401 JSON, tidak silent, tidak di halaman login
+    debugLog(`[DEBUG] API Response: status=${r.status}, path=${path}, ct=${ct}, dataKeys=${Object.keys(data).join(',')} rawLen=${rawText.length}`);
+    
+    // Handle 401 dengan auto-refresh
     if (r.status === 401 && !silent && ct.includes('json') && !location.pathname.includes('/admin/login')) {
-      location.href = '/admin/login';
+      // Coba refresh token
+      if (!this.isRefreshing) {
+        this.isRefreshing = true;
+        this.refreshPromise = this.refreshToken().then(success => {
+          this.isRefreshing = false;
+          return success;
+        });
+      }
+      
+      const refreshed = await this.refreshPromise;
+      if (refreshed) {
+        // Retry request dengan token baru
+        debugLog(`[DEBUG] Retrying request after token refresh: ${method} ${path}`);
+        let retryR;
+        switch (method) {
+          case 'get':
+            return this.get(path, params || {}, false);
+          case 'post':
+            return this.post(path, params || {});
+          case 'put':
+            return this.put(path, params || {});
+          case 'patch':
+            return this.patch(path, params || {});
+          case 'delete':
+            return this.delete(path);
+          case 'postForm':
+            return this.postForm(path, params);
+          case 'putForm':
+            return this.putForm(path, params);
+          default:
+            break;
+        }
+      } else {
+        // Refresh gagal, redirect ke login
+        debugLog(`[DEBUG] Token refresh failed, redirecting to login`);
+        location.href = '/admin/login';
+      }
     }
+    
     return { ok: r.ok, status: r.status, data };
   }
 }
 
 const api = new ApiClient();
+
+/**
+ * Konversi photo_url dari API (ngrok/server URL) ke /storage-proxy/...
+ * agar browser tidak perlu akses ngrok langsung untuk gambar.
+ * Contoh: https://xxxx.ngrok-free.dev/storage/buses/a.jpg
+ *       → /storage-proxy/storage/buses/a.jpg
+ */
+function proxyImgUrl(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return '/storage-proxy' + u.pathname;
+  } catch {
+    // Jika sudah relative path, langsung pakai
+    return url.startsWith('/') ? '/storage-proxy' + url : url;
+  }
+}
 
 /* ── Toast ─────────────────────────────────────────────────────── */
 function toast(msg, type = 'success') {

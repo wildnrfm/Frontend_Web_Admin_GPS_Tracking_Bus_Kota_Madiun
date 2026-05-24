@@ -68,6 +68,7 @@ async function loadPending() {
     const nis   = s.nis   ?? s.student?.nis   ?? '-';
     const sek   = s.sekolah ?? s.student?.sekolah ?? '-';
     const hp    = s.no_hp ?? s.user?.no_hp ?? '-';
+    const alamat = s.alamat ?? s.student?.alamat ?? '-';
     const userId = s.user_id ?? s.id;
 
     const actions = st === 'pending' ? `
@@ -97,6 +98,7 @@ async function loadPending() {
         <div><b>NIS:</b> ${nis}</div>
         <div><b>Sekolah:</b> ${sek}</div>
         <div><b>No HP:</b> ${hp}</div>
+        <div><b>Alamat:</b> ${alamat}</div>
         <div><b>Daftar:</b> ${fmtDate(s.created_at)}</div>
         ${s.rejection_reason ? `<div style="color:var(--c-red)"><b>Alasan Tolak:</b> ${s.rejection_reason}</div>` : ''}
       </div>

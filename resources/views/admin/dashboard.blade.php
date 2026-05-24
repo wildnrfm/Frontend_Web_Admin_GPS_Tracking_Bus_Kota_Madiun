@@ -101,6 +101,13 @@
         <div class="db-kelola-lbl">Halte</div>
         <div class="db-kelola-cnt">{{ $stats['total_haltes'] ?? 0 }}</div>
       </div>
+      <div class="db-kelola-item db-kelola-admin" onclick="location.href='{{ route('admin.admins') }}'">
+        <div class="db-kelola-icon" style="background:#FCE4EC">
+          <span class="material-icons" style="color:#E91E63">admin_panel_settings</span>
+        </div>
+        <div class="db-kelola-lbl">Admin</div>
+        <div class="db-kelola-cnt">{{ $stats['total_admins'] ?? 0 }}</div>
+      </div>
     </div>
 
     {{-- Info bar --}}
@@ -274,10 +281,11 @@
 /* ── Kelola row ─────────────────────────────────────────────────── */
 .db-kelola-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .db-kelola-item {
-  flex: 1;
+  flex: 1 1 calc(50% - 10px);
   background: var(--c-white);
   border-radius: var(--radius-lg);
   padding: 14px 8px 12px;
@@ -288,6 +296,13 @@
   display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 .db-kelola-item:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.db-kelola-item.db-kelola-admin {
+  flex: 1 1 100%;
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+}
 .db-kelola-icon {
   width: 44px; height: 44px;
   border-radius: 12px;
@@ -409,6 +424,13 @@
     border-color: var(--c-primary);
     box-shadow: none;
   }
+  .db-col-right .db-kelola-row .db-kelola-admin {
+    grid-column: span 2;
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 20px;
+  }
   .db-kelola-icon { width: 46px; height: 46px; border-radius: 12px; margin-bottom: 6px; }
   .db-kelola-icon .material-icons { font-size: 22px; }
   .db-kelola-lbl { font-size: 13px; }
@@ -482,103 +504,236 @@
 @endsection
 @push('scripts')
 <script>
-// Greeting
+// ── Greeting ─────────────────────────────────────────────────────
 const h = new Date().getHours();
 document.getElementById('greeting-text').textContent =
   h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam';
 
-// Leaflet map
+// ── Map init ──────────────────────────────────────────────────────
 let map, markers = {}, mapBoundsFitted = false;
 
-async function loadGPS() {
-  const res = await api.get('/gps-tracks/dashboard', {}, true).catch(() => null);
-  if (!res || !res.ok) return;
+function initMap() {
+  if (map) return;
+  const mapEl = document.getElementById('gps-map');
+  if (!mapEl) return;
+  map = L.map(mapEl, { zoomControl: true, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  map.setView([-7.6298, 111.5233], 13);
+  setTimeout(() => map && map.invalidateSize(), 300);
+}
 
-  const gpsBuses = res?.data?.data?.data ?? [];
+// ── GPS Status State (untuk deteksi perubahan) ────────────────────
+let prevGpsStatus = {}; // { bus_id: 'on'|'off' }
 
-  if (!map) {
-    map = L.map('gps-map', { zoomControl: false, attributionControl: false });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    map.setView([-7.6298, 111.5233], 13);
-  }
+function processGpsData(buses) {
+  if (!Array.isArray(buses)) return;
 
-  // Filter bus operasi: gps_status = 'on' (sama seperti mobile)
-  const activeBuses = gpsBuses.filter(b => b.gps_status === 'on');
+  const activeBuses = buses.filter(b => b.gps_status === 'on');
 
   // Update stats
   document.getElementById('stat-bus-active').textContent = activeBuses.length;
   document.getElementById('badge-count').textContent = activeBuses.length + ' bus aktif';
 
-  // Update markers (tambah/pindah/hapus) — hanya untuk bus yang punya current_position
+  // Deteksi perubahan GPS status → tampilkan toast
+  buses.forEach(b => {
+    const prev = prevGpsStatus[b.bus_id];
+    const curr = b.gps_status;
+    if (prev !== undefined && prev !== curr) {
+      // Status berubah!
+      showGpsToast(b.driver_name || b.driver?.name || '—', curr, b.bus_code);
+    }
+    prevGpsStatus[b.bus_id] = curr;
+  });
+
+  // Update markers
   const seen = new Set();
-  activeBuses.forEach((b, idx) => {
-    if (!b.current_position) return; // Skip jika belum ada posisi GPS
-    const pos    = b.current_position;
+  let markerIdx = 0;
+  activeBuses.forEach(b => {
+    if (!b.position && !b.current_position) return;
+    const pos = b.position ?? b.current_position;
     const latLng = [pos.latitude, pos.longitude];
     seen.add(b.bus_id);
+    markerIdx++;
     if (markers[b.bus_id]) {
       markers[b.bus_id].setLatLng(latLng);
     } else {
       const icon = L.divIcon({
-        html: `<div style="background:var(--c-red);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.35)">${idx+1}</div>`,
+        html: `<div style="background:var(--c-primary);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.35)">${markerIdx}</div>`,
         iconSize:[30,30], iconAnchor:[15,15], className:''
       });
       markers[b.bus_id] = L.marker(latLng, {icon}).addTo(map)
-        .bindPopup(`<b>${b.bus_code ?? b.kode_bus ?? '—'}</b><br>${b.driver_name ?? ''}`);
+        .bindPopup(`<b>${b.bus_code ?? '—'}</b><br>${b.driver_name ?? b.driver?.name ?? ''}`);
     }
   });
+
+  // Hapus marker bus yang tidak aktif lagi
   Object.keys(markers).forEach(id => {
     if (!seen.has(+id)) { map.removeLayer(markers[id]); delete markers[id]; }
   });
 
-  // Fit bounds hanya untuk bus yang punya current_position
+  // Fit bounds hanya sekali
   if (!mapBoundsFitted && activeBuses.length > 0) {
-    const busesWithPosition = activeBuses.filter(b => b.current_position);
-    if (busesWithPosition.length > 0) {
-      const lats = busesWithPosition.map(b => b.current_position.latitude);
-      const lngs = busesWithPosition.map(b => b.current_position.longitude);
+    const withPos = activeBuses.filter(b => b.position || b.current_position);
+    if (withPos.length > 0) {
+      const lats = withPos.map(b => (b.position ?? b.current_position).latitude);
+      const lngs = withPos.map(b => (b.position ?? b.current_position).longitude);
       map.fitBounds([[Math.min(...lats),Math.min(...lngs)],[Math.max(...lats),Math.max(...lngs)]],{padding:[20,20]});
       mapBoundsFitted = true;
     }
   }
 
-  // Build bus list
+  // Build bus list HTML
   let listHtml = '';
-  if (activeBuses.length === 0) {
-    listHtml = `<div style="padding:12px;text-align:center;font-size:13px;color:var(--c-text-grey)">Belum ada bus beroperasi</div>`;
+  // Urutkan bus: Aktif (ON) dulu, baru Offline (OFF)
+  const sortedBuses = [...buses].sort((a, b) => {
+    const aOn = a.gps_status === 'on' ? 1 : 0;
+    const bOn = b.gps_status === 'on' ? 1 : 0;
+    return bOn - aOn;
+  });
+
+  if (sortedBuses.length === 0) {
+    listHtml = `<div style="padding:12px;text-align:center;font-size:13px;color:var(--c-text-grey)">Belum ada bus terdaftar</div>`;
   } else {
-    activeBuses.forEach(b => {
-      const pos = b.current_position;
-      const speed = pos ? (pos.speed ?? 0).toFixed(0) : '-';
-      const name = b.bus_code ?? '—';
-      const driver = b.driver?.name ?? '—';
-      const speedText = pos ? `${speed} km/h` : 'Waiting GPS';
-      listHtml += `<div class="db-bus-item">
-        <div class="db-bus-icon">
-          <span class="material-icons" style="color:var(--c-primary);font-size:18px">directions_bus</span>
-        </div>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">${name}</div>
-          <div style="font-size:12px;color:var(--c-text-grey)">${driver}</div>
-        </div>
-        <div style="text-align:right">
-          <span class="live-badge">LIVE</span>
-          <div style="font-size:13px;font-weight:700;margin-top:3px">${speedText}</div>
-        </div>
-      </div>`;
+    sortedBuses.forEach(b => {
+      const isOn = b.gps_status === 'on';
+      const pos   = b.position ?? b.current_position;
+      const speed = pos ? (pos.speed ?? 0).toFixed(0) : '0';
+      const name  = b.bus_code ?? '—';
+      const driver = b.driver_name ?? b.driver?.name ?? '—';
+      
+      const busPhotoHtml = b.photo_url 
+        ? `<img src="${proxyImgUrl(b.photo_url)}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0" alt="${name}">`
+        : `<div class="db-bus-icon" style="background:${isOn ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'}">
+            <span class="material-icons" style="color:${isOn ? '#4CAF50' : '#F44336'};font-size:18px">directions_bus</span>
+          </div>`;
+
+      if (isOn) {
+        listHtml += `<div class="db-bus-item" style="border-left: 3px solid #4CAF50; margin-bottom: 6px;">
+          ${busPhotoHtml}
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px">${name}</div>
+            <div style="font-size:12px;color:var(--c-text-grey)">${driver}</div>
+          </div>
+          <div style="text-align:right">
+            <span class="live-badge" style="background:#4CAF50;padding:2px 6px;border-radius:4px;color:#fff;font-size:10px;font-weight:600">LIVE</span>
+            <div style="font-size:13px;font-weight:700;margin-top:3px">${speed} km/h</div>
+          </div>
+        </div>`;
+      } else {
+        listHtml += `<div class="db-bus-item" style="border-left: 3px solid #F44336; margin-bottom: 6px; opacity: 0.8;">
+          ${busPhotoHtml}
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:13px;color:var(--c-text-grey)">${name}</div>
+            <div style="font-size:12px;color:var(--c-text-grey)">${driver}</div>
+          </div>
+          <div style="text-align:right">
+            <span class="live-badge" style="background:#F44336;padding:2px 6px;border-radius:4px;color:#fff;font-size:10px;font-weight:600">OFFLINE</span>
+          </div>
+        </div>`;
+      }
     });
   }
 
-  // SATU kali set innerHTML — tidak double, tidak flicker
   const busListEl = document.getElementById('bus-list');
-  if (busListEl) {
-    busListEl.innerHTML = `<div style="padding:8px 12px 12px">${listHtml}</div>`;
+  if (busListEl) busListEl.innerHTML = `<div style="padding:8px 12px 12px">${listHtml}</div>`;
+}
+
+// ── SSE Connection dengan auto-reconnect ──────────────────────────
+let sseSource = null;
+let sseReconnectDelay = 1000; // mulai 1 detik, max 30 detik
+let sseReconnectTimer = null;
+let fallbackPollTimer = null;
+let useFallback = false;
+
+function startSSE() {
+  if (!window.adminToken) { startFallback(); return; }
+
+  const token = window.adminToken;
+  const baseUrl = window.apiBaseUrl || '/api';
+  const url = baseUrl + '/gps-tracks/stream?token=' + encodeURIComponent(token);
+
+  if (sseSource) { sseSource.close(); sseSource = null; }
+
+  try {
+    sseSource = new EventSource(url);
+
+    sseSource.addEventListener('gps_update', function(e) {
+      sseReconnectDelay = 1000; // reset delay saat sukses
+      useFallback = false;
+      try {
+        const data = JSON.parse(e.data);
+        const buses = data.buses ?? data;
+        initMap();
+        processGpsData(buses);
+      } catch(err) { /* ignore parse error */ }
+    });
+
+    sseSource.addEventListener('ping', function(e) {
+      // Heartbeat diterima — koneksi masih hidup
+      sseReconnectDelay = 1000;
+    });
+
+    sseSource.addEventListener('close', function(e) {
+      sseSource.close();
+      scheduleReconnect();
+    });
+
+    sseSource.onerror = function(e) {
+      sseSource.close();
+      sseSource = null;
+      // Jika gagal 3 kali, fallback ke polling
+      if (sseReconnectDelay >= 8000) {
+        startFallback();
+      } else {
+        scheduleReconnect();
+      }
+    };
+
+    // Stop fallback polling jika SSE berhasil connect
+    if (fallbackPollTimer) { clearInterval(fallbackPollTimer); fallbackPollTimer = null; }
+
+  } catch(e) {
+    startFallback();
   }
 }
 
-loadGPS();
+function scheduleReconnect() {
+  if (sseReconnectTimer) clearTimeout(sseReconnectTimer);
+  sseReconnectTimer = setTimeout(() => {
+    sseReconnectDelay = Math.min(sseReconnectDelay * 2, 30000);
+    startSSE();
+  }, sseReconnectDelay);
+}
 
-// Polling setiap 3 detik (seperti mobile)
-setInterval(loadGPS, 3000);
+// Fallback: polling biasa jika SSE tidak didukung/gagal terus
+async function startFallback() {
+  if (useFallback) return; // sudah jalan
+  useFallback = true;
+  await pollGpsFallback();
+  fallbackPollTimer = setInterval(pollGpsFallback, 4000);
+}
+
+async function pollGpsFallback() {
+  try {
+    const res = await api.get('/gps-tracks/dashboard', {}, true).catch(() => null);
+    if (!res || !res.ok) return;
+    const buses = res?.data?.data?.data ?? [];
+    // Konversi format dashboard ke format SSE
+    const mapped = buses.map(b => ({
+      ...b,
+      driver_name: b.driver?.name ?? '',
+      position: b.current_position,
+    }));
+    initMap();
+    processGpsData(mapped);
+  } catch(e) { /* silent */ }
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  startSSE();
+});
 </script>
 @endpush
+

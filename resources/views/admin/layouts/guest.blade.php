@@ -9,6 +9,9 @@
 </head>
 <body>
 @yield('content')
+<script>
+  window.apiBaseUrl = '{{ env('API_BASE_URL', url('/api')) }}';
+</script>
 <script src="{{ asset('admin/js/admin.js') }}"></script>
 </body>
 </html>
