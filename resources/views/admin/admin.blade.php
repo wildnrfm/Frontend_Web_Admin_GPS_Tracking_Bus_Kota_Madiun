@@ -9,6 +9,72 @@
 @section('content')
 
 <style>
+/* ╔══════════════════════════════════════════════════════════════╗ */
+/* ║              ADMIN PAGE REDESIGN STYLES                        ║ */
+/* ╚══════════════════════════════════════════════════════════════╝ */
+
+.admin-hero {
+  background: linear-gradient(135deg, #0F3D22 0%, #1B5E37 60%, #2E7D52 100%);
+  border-radius: 20px;
+  padding: 28px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(15, 61, 34, 0.24);
+  margin-bottom: 24px;
+}
+.admin-hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+.admin-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: -40px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+.admin-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  z-index: 2;
+}
+.admin-hero-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.admin-hero-text h2 {
+  margin: 0; font-size: 24px; font-weight: 700; color: #fff;
+  letter-spacing: -0.3px;
+}
+.admin-hero-text p {
+  margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,.78);
+}
+
+.admin-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.admin-filter-bar .search-box {
+  flex: 1;
+  min-width: 220px;
+}
+
 /* ── Premium Photo Upload & Preview UI ── */
 .photo-upload-zone {
   border: 2.5px dashed #abb8b0;
@@ -27,12 +93,12 @@
   box-sizing: border-box;
 }
 .photo-upload-zone:hover {
-  border-color: var(--c-primary);
-  background: var(--c-primary-light);
+  border-color: rgba(46, 125, 82, 0.8);
+  background: rgba(222, 244, 230, 0.95);
 }
 .photo-upload-zone .material-icons {
   font-size: 32px;
-  color: var(--c-primary);
+  color: #1B5E37;
   transition: transform 0.2s ease;
 }
 .photo-upload-zone:hover .material-icons {
@@ -87,7 +153,18 @@
 }
 </style>
 
-<div class="filter-bar">
+{{-- Hero Card --}}
+<div class="admin-hero">
+  <div class="admin-hero-top">
+    <div class="admin-hero-icon"><span class="material-icons">admin_panel_settings</span></div>
+    <div class="admin-hero-text">
+      <h2>Manajemen Admin</h2>
+      <p>Atur hak akses, profil admin, dan akun pengelola sistem</p>
+    </div>
+  </div>
+</div>
+
+<div class="admin-filter-bar">
   <div class="search-box">
     <span class="material-icons">search</span>
     <input type="text" id="search" placeholder="Cari nama, email..." oninput="debounce(loadAdmin,400)()">
@@ -114,7 +191,7 @@
   <div class="modal" style="max-width:680px; border-radius:16px; overflow:hidden;">
     <div class="modal-header" style="background:#f8faf9; border-bottom:1px solid #eef2f0; padding:18px 24px;">
       <div style="display:flex; align-items:center; gap:10px;">
-        <div style="width:40px; height:40px; border-radius:10px; background:#FCE4EC; color:#E91E63; display:flex; align-items:center; justify-content:center;">
+        <div style="width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.16); color:#FFF; display:flex; align-items:center; justify-content:center;">
           <span class="material-icons">admin_panel_settings</span>
         </div>
         <div>
@@ -198,7 +275,7 @@
     </div>
     <div class="modal-footer" style="background:#f8faf9; border-top:1px solid #eef2f0; padding:16px 24px; display:flex; justify-content:flex-end; gap:12px;">
       <button class="btn btn-outline btn-sm" onclick="closeModal('admin-modal')" style="border-radius:8px;">Batal</button>
-      <button class="btn btn-primary btn-sm" onclick="saveAdmin()" style="border-radius:8px; background:var(--c-primary); border-color:var(--c-primary);">Simpan</button>
+      <button class="btn btn-primary btn-sm" onclick="saveAdmin()" style="border-radius:8px; background:linear-gradient(135deg, #0F3D22 0%, #1B5E37 100%); border:none;">Simpan</button>
     </div>
   </div>
 </div>
@@ -223,7 +300,7 @@ async function loadAdmin(page = 1) {
   const tbody = document.getElementById('admin-tbody');
   
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="material-icons" style="color:#E91E63">admin_panel_settings</span><p>Tidak ada admin ditemukan</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="material-icons" style="color:#1B5E37">admin_panel_settings</span><p>Tidak ada admin ditemukan</p></div></td></tr>`;
     document.getElementById('admin-pagination').innerHTML = '';
     return;
   }
@@ -240,7 +317,7 @@ async function loadAdmin(page = 1) {
       </td>
       <td><div style="font-weight:600">${a.name ?? '-'}</div></td>
       <td style="color:var(--c-text-grey);font-size:12px">${a.email ?? '-'}</td>
-      <td><span class="badge badge-purple" style="background:#FCE4EC; color:#E91E63;">ADMIN</span></td>
+      <td><span class="badge badge-purple" style="background:rgba(46,125,82,0.12); color:#1B5E37;">ADMIN</span></td>
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-xs btn-outline" onclick="editAdmin(${a.id})">Edit</button>

@@ -165,7 +165,9 @@ class AuthService
 
             return $response->successful();
         } catch (\Exception $e) {
-            return false;
+            // Keep user logged in if API server is temporarily busy/unreachable
+            \Log::warning('validateToken API connection error: ' . $e->getMessage());
+            return true;
         }
     }
 

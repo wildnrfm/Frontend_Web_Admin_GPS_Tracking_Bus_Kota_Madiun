@@ -92,6 +92,7 @@ Route::middleware(['web', 'admin.authenticated'])->group(function () {
     Route::get('/profil', [ProfileController::class, 'index'])->name('admin.profil');
     Route::get('/profil/edit', [ProfileController::class, 'edit'])->name('admin.profil.edit');
     Route::put('/profil', [ProfileController::class, 'update'])->name('admin.profil.update');
+    Route::post('/profil/refresh-session', [ProfileController::class, 'refreshSession'])->name('admin.profil.refresh-session');
 });
 
 // ── API Proxy ─────────────────────────────────────────────────────────

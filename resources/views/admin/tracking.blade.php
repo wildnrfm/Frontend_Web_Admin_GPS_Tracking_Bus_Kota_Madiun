@@ -3,6 +3,99 @@
 @section('page-title','Live Tracking')
 @section('content')
 
+<style>
+/* ╔══════════════════════════════════════════════════════════════╗ */
+/* ║              TRACKING PAGE REDESIGN STYLES                    ║ */
+/* ╚══════════════════════════════════════════════════════════════╝ */
+.tracking-hero {
+  background: linear-gradient(135deg, #0F3D22 0%, #1B5E37 60%, #2E7D52 100%);
+  border-radius: 20px;
+  padding: 26px 28px;
+  color: #fff;
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(15, 61, 34, 0.24);
+}
+.tracking-hero::before {
+  content: '';
+  position: absolute;
+  top: -70px; right: -50px;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+}
+.tracking-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -50px; left: -30px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+}
+.tracking-hero-top {
+  display: flex; align-items: center; gap: 16px;
+}
+.tracking-hero-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.tracking-hero-text h2 {
+  margin: 0; font-size: 24px; font-weight: 700; color: #fff;
+}
+.tracking-hero-text p {
+  margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,.82);
+}
+.tracking-action-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 18px; flex-wrap: wrap;
+}
+.tracking-action-bar .btn-route {
+  background: linear-gradient(135deg, #0F5E2C 0%, #2E9D63 100%);
+  border: none; color: #fff;
+}
+
+/* Remove default page-content padding for full-height map layout */
+.page-content { padding: 16px !important; padding-bottom: calc(var(--bottomnav-h) + 16px) !important; }
+
+/* Mobile: stack map on top, panel below */
+@media (max-width: 640px) {
+  #tracking-main-grid {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+  #tracking-main-grid > div:first-child { height: 55vh; min-height: 260px; }
+}
+
+/* Desktop: wider side panel */
+@media (min-width: 1024px) {
+  #tracking-main-grid { grid-template-columns: 1fr 340px; gap: 20px; }
+}
+@media (min-width: 1280px) {
+  #tracking-main-grid { grid-template-columns: 1fr 380px; gap: 24px; }
+  .page-content { padding: 20px !important; padding-bottom: calc(var(--bottomnav-h) + 20px) !important; }
+}
+</style>
+
+<div class="tracking-hero">
+  <div class="tracking-hero-top">
+    <div class="tracking-hero-icon"><span class="material-icons">map</span></div>
+    <div class="tracking-hero-text">
+      <h2>Live Tracking</h2>
+      <p>Pantau armada bus secara real-time dan kelola rute dengan cepat</p>
+    </div>
+  </div>
+  <div class="tracking-action-bar">
+    <div style="font-size:13px;color:rgba(255,255,255,0.9)">Status koneksi GPS dan titik armada langsung tampil di peta</div>
+    <button class="btn btn-primary btn-sm btn-route" id="btn-route-editor" onclick="toggleRouteEditor()" title="Atur Rute">
+      <span class="material-icons" style="font-size:14px">route</span> Atur Rute
+    </button>
+  </div>
+</div>
+
 <div id="tracking-main-grid" style="display:grid;grid-template-columns:1fr 300px;gap:16px;height:calc(100vh - var(--topbar-h) - var(--bottomnav-h) - 40px)">
 
   {{-- Map --}}
@@ -14,7 +107,7 @@
     </div>
     {{-- Route editor toggle --}}
     <div style="position:absolute;top:12px;left:12px;z-index:400;display:flex;flex-direction:column;gap:6px">
-      <button class="btn btn-primary btn-sm" id="btn-route-editor" onclick="toggleRouteEditor()" title="Atur Rute">
+      <button class="btn btn-primary btn-sm" onclick="toggleRouteEditor()" title="Atur Rute">
         <span class="material-icons" style="font-size:14px">route</span> Atur Rute
       </button>
     </div>
@@ -70,30 +163,6 @@
 
   </div>
 </div>
-
-{{-- Styles: tracking page overrides --}}
-<style>
-/* Remove default page-content padding for full-height map layout */
-.page-content { padding: 16px !important; padding-bottom: calc(var(--bottomnav-h) + 16px) !important; }
-
-/* Mobile: stack map on top, panel below */
-@media (max-width: 640px) {
-  #tracking-main-grid {
-    grid-template-columns: 1fr !important;
-    height: auto !important;
-  }
-  #tracking-main-grid > div:first-child { height: 55vh; min-height: 260px; }
-}
-
-/* Desktop: wider side panel */
-@media (min-width: 1024px) {
-  #tracking-main-grid { grid-template-columns: 1fr 340px; gap: 20px; }
-}
-@media (min-width: 1280px) {
-  #tracking-main-grid { grid-template-columns: 1fr 380px; gap: 24px; }
-  .page-content { padding: 20px !important; padding-bottom: calc(var(--bottomnav-h) + 20px) !important; }
-}
-</style>
 
 @endsection
 @push('scripts')

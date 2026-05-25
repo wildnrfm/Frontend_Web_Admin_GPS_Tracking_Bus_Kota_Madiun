@@ -3,6 +3,91 @@
 @section('page-title','Persetujuan Akun')
 @section('content')
 
+<style>
+/* ╔══════════════════════════════════════════════════════════════╗ */
+/* ║              PENDING PAGE REDESIGN STYLES                      ║ */
+/* ╚══════════════════════════════════════════════════════════════╝ */
+.pending-hero {
+  background: linear-gradient(135deg, #0F3D22 0%, #1B5E37 60%, #2E7D52 100%);
+  border-radius: 20px;
+  padding: 28px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(15, 61, 34, 0.24);
+  margin-bottom: 24px;
+}
+.pending-hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -50px;
+  width: 240px; height: 240px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+}
+.pending-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -50px; left: -40px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+}
+.pending-hero-top {
+  display: flex; align-items: center; gap: 16px;
+}
+.pending-hero-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.pending-hero-text h2 {
+  margin: 0; font-size: 24px; font-weight: 700;
+}
+.pending-hero-text p {
+  margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,.85);
+}
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.chip {
+  border: 1px solid rgba(255,255,255,0.35);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  cursor: pointer;
+  transition: all 200ms ease;
+  font-size: 13px;
+  font-weight: 600;
+}
+.chip:hover {
+  background: rgba(255,255,255,0.18);
+}
+.chip.active {
+  background: #fff;
+  color: #1B5E37;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(15,61,34,0.18);
+}
+</style>
+
+<div class="pending-hero">
+  <div class="pending-hero-top">
+    <div class="pending-hero-icon"><span class="material-icons">pending_actions</span></div>
+    <div class="pending-hero-text">
+      <h2>Persetujuan Akun</h2>
+      <p>Review dan kelola permintaan akun siswa secara cepat</p>
+    </div>
+  </div>
+</div>
+
 <div class="filter-bar">
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="chip active" id="chip-pending"   onclick="setFilter('pending')">Pending</button>

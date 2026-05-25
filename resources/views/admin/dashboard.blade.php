@@ -3,36 +3,53 @@
 @section('page-title','Beranda')
 @section('content')
 
-{{-- ═══ HEADER: Greeting (no card, plain) ══════════════════════════ --}}
-<div class="db-greeting">
-  <div class="db-greet-small" id="greeting-text">Selamat pagi</div>
-  <div class="db-greet-name">{{ $user['name'] ?? 'Admin' }}</div>
+{{-- ═══ HEADER: Greeting Hero Card ══════════════════════════ --}}
+<div class="db-hero-card">
+  <div class="db-hero-content">
+    <div id="greeting-text" class="db-hero-greet">Selamat pagi</div>
+    <div class="db-hero-name">{{ $user['name'] ?? 'Admin' }}</div>
+    <p class="db-hero-desc">Sistem Monitoring Real-Time & Pemantauan Armada Bus Sekolah Kota Madiun</p>
+  </div>
+  <div class="db-hero-deco">
+    <span class="material-icons db-hero-icon-bg">directions_bus</span>
+  </div>
 </div>
 
-{{-- ═══ STAT CARDS — 3 cards like mobile ════════════════════════════ --}}
-<div class="db-stat-row">
+{{-- ═══ STAT CARDS — 3 cards matching profil page accents ════════════ --}}
+<div class="db-stat-grid">
   {{-- Card 1: Bus --}}
-  <div class="db-stat-bus" style="background-image:url('{{ asset('admin/images/bus.jpeg') }}')">
-    <div class="db-stat-overlay"></div>
-    <div class="db-stat-val" id="stat-bus-active">0</div>
-    <div class="db-stat-lbl">Bus Beroperasi</div>
-    <div class="db-stat-sub">dari {{ $stats['total_buses'] ?? 0 }} bus</div>
+  <div class="db-card-stat">
+    <div class="db-card-stat-icon bg-green">
+      <span class="material-icons text-green">directions_bus</span>
+    </div>
+    <div class="db-card-stat-info">
+      <div class="db-card-stat-val text-green" id="stat-bus-active">0</div>
+      <div class="db-card-stat-lbl">Bus Beroperasi</div>
+      <div class="db-card-stat-sub">dari {{ $stats['total_buses'] ?? 0 }} armada</div>
+    </div>
   </div>
 
-  <div class="db-stat-right">
-    {{-- Card 2: Siswa --}}
-    <div class="db-stat-white" style="background-image:url('{{ asset('admin/images/siswa.jpeg') }}')">  
-      <div class="db-stat-overlay"></div>
-      <div class="db-stat-num">{{ $stats['total_students'] ?? 0 }}</div>
-      <div class="db-stat-lbl2">Siswa</div>
-      <div class="db-stat-sub2">Terdaftar</div>
+  {{-- Card 2: Siswa --}}
+  <div class="db-card-stat">
+    <div class="db-card-stat-icon bg-blue">
+      <span class="material-icons text-blue">school</span>
     </div>
-    {{-- Card 3: Persetujuan --}}
-    <div class="db-stat-white" style="background-image:url('{{ asset('admin/images/approve.jpeg') }}')">  
-      <div class="db-stat-overlay"></div>
-      <div class="db-stat-num">{{ $stats['pending_count'] ?? 0 }}</div>
-      <div class="db-stat-lbl2">Persetujuan</div>
-      <div class="db-stat-sub2">Menunggu</div>
+    <div class="db-card-stat-info">
+      <div class="db-card-stat-val text-blue">{{ $stats['total_students'] ?? 0 }}</div>
+      <div class="db-card-stat-lbl">Siswa Terdaftar</div>
+      <div class="db-card-stat-sub">siswa terverifikasi</div>
+    </div>
+  </div>
+
+  {{-- Card 3: Persetujuan --}}
+  <div class="db-card-stat">
+    <div class="db-card-stat-icon bg-orange">
+      <span class="material-icons text-orange">pending_actions</span>
+    </div>
+    <div class="db-card-stat-info">
+      <div class="db-card-stat-val text-orange">{{ $stats['pending_count'] ?? 0 }}</div>
+      <div class="db-card-stat-lbl">Persetujuan Pending</div>
+      <div class="db-card-stat-sub">butuh konfirmasi admin</div>
     </div>
   </div>
 </div>
@@ -43,9 +60,9 @@
   {{-- ── LEFT COLUMN: Map + Bus List ── --}}
   <div class="db-col-left">
     <div class="db-section-header">
-      <span>Live Tracking</span>
+      <span class="db-section-title">Live Tracking</span>
       <a href="{{ route('admin.tracking') }}" class="db-link-btn">
-        <span class="material-icons" style="font-size:14px">open_in_full</span> Buka Peta
+        <span class="material-icons">open_in_full</span> Buka Peta
       </a>
     </div>
 
@@ -69,72 +86,91 @@
   {{-- ── RIGHT COLUMN: Kelola + Info + Approval ── --}}
   <div class="db-col-right">
     <div class="db-section-header" style="margin-top:0">
-      <span>Kelola</span>
+      <span class="db-section-title">Kelola</span>
     </div>
 
-    <div class="db-kelola-row">
-      <div class="db-kelola-item" onclick="location.href='{{ route('admin.siswa') }}'">
-        <div class="db-kelola-icon" style="background:#E8F5ED">
-          <span class="material-icons" style="color:var(--c-primary)">school</span>
+    <div class="db-kelola-card">
+      {{-- Siswa --}}
+      <a href="{{ route('admin.siswa') }}" class="db-kelola-row">
+        <div class="db-kelola-row-icon bg-green"><span class="material-icons text-green">school</span></div>
+        <div class="db-kelola-row-body">
+          <div class="db-kelola-row-title">Siswa</div>
+          <div class="db-kelola-row-desc">Kelola data siswa & persetujuan</div>
         </div>
-        <div class="db-kelola-lbl">Siswa</div>
-        <div class="db-kelola-cnt">{{ $stats['total_students'] ?? 0 }}</div>
-      </div>
-      <div class="db-kelola-item" onclick="location.href='{{ route('admin.bus') }}'">
-        <div class="db-kelola-icon" style="background:#E3F0FB">
-          <span class="material-icons" style="color:var(--c-blue)">directions_bus</span>
+        <div class="db-kelola-row-badge bg-green text-green">{{ $stats['total_students'] ?? 0 }}</div>
+        <span class="material-icons db-kelola-row-arrow">chevron_right</span>
+      </a>
+
+      {{-- Bus --}}
+      <a href="{{ route('admin.bus') }}" class="db-kelola-row">
+        <div class="db-kelola-row-icon bg-blue"><span class="material-icons text-blue">directions_bus</span></div>
+        <div class="db-kelola-row-body">
+          <div class="db-kelola-row-title">Bus</div>
+          <div class="db-kelola-row-desc">Daftar armada, rute, & halte</div>
         </div>
-        <div class="db-kelola-lbl">Bus</div>
-        <div class="db-kelola-cnt">{{ $stats['total_buses'] ?? 0 }}</div>
-      </div>
-      <div class="db-kelola-item" onclick="location.href='{{ route('admin.driver') }}'">
-        <div class="db-kelola-icon" style="background:#F3E5F5">
-          <span class="material-icons" style="color:var(--c-purple)">badge</span>
+        <div class="db-kelola-row-badge bg-blue text-blue">{{ $stats['total_buses'] ?? 0 }}</div>
+        <span class="material-icons db-kelola-row-arrow">chevron_right</span>
+      </a>
+
+      {{-- Driver --}}
+      <a href="{{ route('admin.driver') }}" class="db-kelola-row">
+        <div class="db-kelola-row-icon bg-purple"><span class="material-icons text-purple">badge</span></div>
+        <div class="db-kelola-row-body">
+          <div class="db-kelola-row-title">Driver</div>
+          <div class="db-kelola-row-desc">Kelola pengemudi bus sekolah</div>
         </div>
-        <div class="db-kelola-lbl">Driver</div>
-        <div class="db-kelola-cnt">{{ $stats['total_drivers'] ?? 0 }}</div>
-      </div>
-      <div class="db-kelola-item" onclick="location.href='{{ route('admin.halte') }}'">
-        <div class="db-kelola-icon" style="background:#FFF8E1">
-          <span class="material-icons" style="color:#F4A100">place</span>
+        <div class="db-kelola-row-badge bg-purple text-purple">{{ $stats['total_drivers'] ?? 0 }}</div>
+        <span class="material-icons db-kelola-row-arrow">chevron_right</span>
+      </a>
+
+      {{-- Halte --}}
+      <a href="{{ route('admin.halte') }}" class="db-kelola-row">
+        <div class="db-kelola-row-icon bg-yellow"><span class="material-icons text-yellow">place</span></div>
+        <div class="db-kelola-row-body">
+          <div class="db-kelola-row-title">Halte</div>
+          <div class="db-kelola-row-desc">Titik penjemputan & perhentian</div>
         </div>
-        <div class="db-kelola-lbl">Halte</div>
-        <div class="db-kelola-cnt">{{ $stats['total_haltes'] ?? 0 }}</div>
-      </div>
-      <div class="db-kelola-item db-kelola-admin" onclick="location.href='{{ route('admin.admins') }}'">
-        <div class="db-kelola-icon" style="background:#FCE4EC">
-          <span class="material-icons" style="color:#E91E63">admin_panel_settings</span>
+        <div class="db-kelola-row-badge bg-yellow text-yellow">{{ $stats['total_haltes'] ?? 0 }}</div>
+        <span class="material-icons db-kelola-row-arrow">chevron_right</span>
+      </a>
+
+      {{-- Admin --}}
+      <a href="{{ route('admin.admins') }}" class="db-kelola-row">
+        <div class="db-kelola-row-icon bg-pink"><span class="material-icons text-pink">admin_panel_settings</span></div>
+        <div class="db-kelola-row-body">
+          <div class="db-kelola-row-title">Admin</div>
+          <div class="db-kelola-row-desc">Pengaturan hak akses sistem</div>
         </div>
-        <div class="db-kelola-lbl">Admin</div>
-        <div class="db-kelola-cnt">{{ $stats['total_admins'] ?? 0 }}</div>
-      </div>
+        <div class="db-kelola-row-badge bg-pink text-pink">{{ $stats['total_admins'] ?? 0 }}</div>
+        <span class="material-icons db-kelola-row-arrow">chevron_right</span>
+      </a>
     </div>
 
     {{-- Info bar --}}
-    <div class="info-bar" style="margin-top:16px">
-      <span class="material-icons" style="font-size:16px">info</span>
+    <div class="info-bar-new">
+      <span class="material-icons">info</span>
       <span>Untuk mengatur rute &amp; halte bus, buka menu <strong>Bus</strong> → tap bus yang ingin diatur → "Atur Rute &amp; Halte Bus".</span>
     </div>
 
     {{-- Persetujuan card --}}
-    <div class="db-approval-card" onclick="location.href='{{ route('admin.pending') }}'">
-      <div class="db-approval-icon">
-        <span class="material-icons" style="color:var(--c-orange)">pending_actions</span>
+    <div class="db-approval-card-new" onclick="location.href='{{ route('admin.pending') }}'">
+      <div class="db-approval-row-icon bg-orange">
+        <span class="material-icons text-orange">pending_actions</span>
         @if(($stats['pending_count'] ?? 0) > 0)
-        <span class="db-dot"></span>
+        <span class="db-dot-new"></span>
         @endif
       </div>
       <div style="flex:1">
         <div class="db-approval-title">Persetujuan Akun</div>
         <div class="db-approval-sub">
           @if(($stats['pending_count'] ?? 0) > 0)
-            {{ $stats['pending_count'] }} siswa menunggu persetujuan
+            <strong>{{ $stats['pending_count'] }}</strong> siswa menunggu persetujuan
           @else
             Tidak ada permintaan baru
           @endif
         </div>
       </div>
-      <span class="material-icons" style="color:var(--c-text-grey)">chevron_right</span>
+      <span class="material-icons db-approval-arrow">chevron_right</span>
     </div>
   </div>
 
@@ -142,362 +178,565 @@
 
 {{-- ═══ CSS ═══════════════════════════════════════════════════════ --}}
 <style>
-/* ── Greeting ───────────────────────────────────────────────────── */
-.db-greeting { margin-bottom: 20px; }
-.db-greet-small { font-size: 13px; color: var(--c-text-grey); font-weight: 400; }
-.db-greet-name  { font-size: 28px; font-weight: 800; color: var(--c-text-dark); line-height: 1.1; }
-
-/* ── Stat row: always 3 equal columns (100%/3 each) ─────────────── */
-.db-stat-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-/* Bus card */
-.db-stat-bus {
-  background-color: var(--c-primary);
-  background-size: cover;
-  background-position: center;
-  border-radius: var(--radius-lg);
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  cursor: default;
+/* ── Greeting Hero Card ── */
+.db-hero-card {
+  background: linear-gradient(135deg, #0F3D22 0%, #1B5E37 60%, #2E7D52 100%);
+  border-radius: 20px;
+  padding: 28px 24px;
+  color: #ffffff;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(15, 61, 34, 0.2);
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-
-/* Overlay for text readability on bg images */
-.db-stat-overlay {
+.db-hero-card::before {
+  content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  top: -80px; right: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.05);
   pointer-events: none;
 }
-.db-stat-bus .db-stat-overlay   { background: rgba(15,61,34,.62); }
-.db-stat-white .db-stat-overlay { background: rgba(10,30,15,.58); }
-
-/* All stat card text above overlay */
-.db-stat-bus > *:not(.db-stat-overlay),
-.db-stat-white > *:not(.db-stat-overlay) { position: relative; z-index: 1; }
-
-.db-stat-icon-bus {
-  width: 38px; height: 38px;
-  background: rgba(255,255,255,.2);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
+.db-hero-card::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: -40px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.04);
+  pointer-events: none;
+}
+.db-hero-content {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+}
+.db-hero-greet {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.7);
   margin-bottom: 4px;
 }
-.db-stat-icon-bus .material-icons { color: #fff; font-size: 20px; }
-.db-stat-val { font-size: 28px; font-weight: 800; color: #fff; line-height: 1; }
-.db-stat-lbl { font-size: 11px; color: rgba(255,255,255,.9); font-weight: 600; }
-.db-stat-sub { font-size: 10px; color: rgba(255,255,255,.75); }
+.db-hero-name {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+.db-hero-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  max-width: 480px;
+  line-height: 1.45;
+}
+.db-hero-deco {
+  position: relative;
+  z-index: 1;
+  opacity: 0.12;
+  margin-left: 20px;
+}
+.db-hero-icon-bg {
+  font-size: 72px !important;
+  color: #ffffff;
+}
 
-/* db-stat-right becomes transparent so children are grid items */
-.db-stat-right { display: contents; }
+/* ── Stat Cards ── */
+.db-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.db-card-stat {
+  background: var(--c-white, #fff);
+  border-radius: 18px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--c-border, #dde6e0);
+  box-shadow: 0 4px 16px rgba(15, 61, 34, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.db-card-stat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(15, 61, 34, 0.08);
+}
+.db-card-stat:nth-child(1):hover { border-color: var(--c-primary, #1B5E37); }
+.db-card-stat:nth-child(2):hover { border-color: var(--c-blue, #1565C0); }
+.db-card-stat:nth-child(3):hover { border-color: var(--c-orange, #E67E00); }
 
-/* White stat cards — bg image, not clickable */
-.db-stat-white {
-  background-color: var(--c-surface2);
-  background-size: cover;
-  background-position: center;
-  border-radius: var(--radius-lg);
-  padding: 14px 12px;
-  box-shadow: var(--shadow-card);
-  cursor: default;
+.db-card-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+.db-card-stat:hover .db-card-stat-icon {
+  transform: scale(1.18);
+}
+.db-card-stat-icon .material-icons {
+  font-size: 22px;
+}
+
+/* Colors & Icons */
+.bg-green { background: rgba(27, 94, 55, 0.1); }
+.text-green { color: #1B5E37 !important; }
+
+.bg-blue { background: rgba(21, 101, 192, 0.1); }
+.text-blue { color: #1565C0 !important; }
+
+.bg-orange { background: rgba(230, 126, 0, 0.1); }
+.text-orange { color: #E67E00 !important; }
+
+.db-card-stat-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  position: relative;
-  overflow: hidden;
 }
-.db-stat-white:hover { box-shadow: var(--shadow-card); transform: none; }
-.db-stat-num  { font-size: 20px; font-weight: 800; color: #fff; line-height: 1; }
-.db-stat-lbl2 { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.9); }
-.db-stat-sub2 { font-size: 10px; color: rgba(255,255,255,.7); }
+.db-card-stat-val {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 2px;
+  letter-spacing: -0.5px;
+}
+.db-card-stat-lbl {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--c-text-dark, #2D2D2D);
+}
+.db-card-stat-sub {
+  font-size: 10.5px;
+  color: var(--c-text-grey, #6B7B73);
+  margin-top: 1px;
+}
 
-/* ── Section header ─────────────────────────────────────────────── */
+/* ── Section header ── */
 .db-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  font-size: 16px;
+  margin-bottom: 16px;
+}
+.db-section-title {
+  font-size: 11px;
   font-weight: 700;
-  color: var(--c-text-dark);
+  color: var(--c-text-grey, #6B7B73);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.db-section-title::after {
+  content: '';
+  height: 1px;
+  background: var(--c-divider, #EBF0ED);
+  margin-right: 16px;
+  flex: 1;
 }
 .db-link-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  color: var(--c-primary); font-size: 13px; font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-primary, #1B5E37);
+  font-size: 12px;
+  font-weight: 700;
   text-decoration: none;
+  background: var(--c-primary-light, #E8F5ED);
+  padding: 6px 14px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(27, 94, 55, 0.15);
 }
-.db-link-btn:hover { opacity: .8; }
+.db-link-btn:hover {
+  background: var(--c-primary, #1B5E37);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 61, 34, 0.12);
+}
+.db-link-btn .material-icons {
+  font-size: 14px;
+}
 
-/* ── Map card ───────────────────────────────────────────────────── */
+/* ── Map card ── */
 .db-map-card {
-  background: var(--c-white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  background: var(--c-white, #fff);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(15, 61, 34, 0.03);
+  border: 1px solid var(--c-border, #dde6e0);
   overflow: hidden;
   margin-bottom: 0;
 }
-#gps-map { width: 100%; height: 240px; z-index: 0; }
+#gps-map { width: 100%; height: 260px; z-index: 0; }
 .db-map-badge {
   position: absolute;
-  top: 10px; left: 10px;
-  background: var(--c-primary);
+  top: 14px; right: 14px;
+  background: var(--c-primary-dark, #0F3D22);
   color: #fff;
   border-radius: 20px;
-  padding: 5px 12px;
-  font-size: 12px;
+  padding: 6px 14px;
+  font-size: 11.5px;
   font-weight: 700;
-  display: flex; align-items: center; gap: 5px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  z-index: 400;
 }
-.db-bus-list { padding: 8px 12px 12px; }
+
+/* ── Bus List Styling ── */
+.db-bus-list {
+  padding: 16px;
+  background: var(--c-white, #fff);
+  border-top: 1px solid var(--c-divider, #EBF0ED);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .db-bus-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 14px;
-  background: var(--c-bg);
-  border-radius: var(--radius-md);
-  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #fdfdfd;
+  border: 1px solid var(--c-border, #DDE6E0);
+  border-radius: 14px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.db-bus-item:hover {
+  background: rgba(27, 94, 55, 0.02);
+  border-color: var(--c-primary, #1B5E37);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(15, 61, 34, 0.03);
+}
+.db-bus-item.bus-online {
+  border-left: 4px solid var(--c-primary, #1B5E37);
+}
+.db-bus-item.bus-offline {
+  border-left: 4px solid var(--c-red, #D32F2F);
+  opacity: 0.85;
 }
 .db-bus-icon {
-  width: 36px; height: 36px;
-  background: var(--c-primary-light);
-  border-radius: 8px;
+  width: 40px; height: 40px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
+.db-bus-icon.online {
+  background: rgba(27, 94, 55, 0.1);
+  color: var(--c-primary, #1B5E37);
+}
+.db-bus-icon.offline {
+  background: rgba(211, 47, 47, 0.1);
+  color: var(--c-red, #D32F2F);
+}
+.db-bus-photo {
+  width: 40px; height: 40px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+  border: 1px solid var(--c-border, #DDE6E0);
+}
+.db-bus-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--c-text-dark, #2D2D2D);
+}
+.db-bus-driver {
+  font-size: 12px;
+  color: var(--c-text-grey, #6B7B73);
+}
+.db-bus-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  display: inline-block;
+}
+.db-bus-badge.online {
+  background: var(--c-primary, #1B5E37);
+}
+.db-bus-badge.offline {
+  background: var(--c-red, #D32F2F);
+}
+.db-bus-speed {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--c-text-dark, #2D2D2D);
+  margin-top: 2px;
+  letter-spacing: -.2px;
+}
 
-/* ── Desktop grid (mobile: single column, invisible) ────────────── */
+/* ── Desktop grid (mobile: single column) ── */
 .db-desktop-grid { display: block; }
 .db-col-right { margin-top: 20px; }
 
-/* ── Kelola row ─────────────────────────────────────────────────── */
+/* ── Kelola card (New List-Style matching Profile) ── */
+.db-kelola-card {
+  background: var(--c-white, #fff);
+  border: 1px solid var(--c-border, #dde6e0);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 61, 34, 0.03);
+  margin-bottom: 16px;
+}
 .db-kelola-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.db-kelola-item {
-  flex: 1 1 calc(50% - 10px);
-  background: var(--c-white);
-  border-radius: var(--radius-lg);
-  padding: 14px 8px 12px;
-  text-align: center;
-  box-shadow: var(--shadow-card);
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid var(--c-divider, #ebf0ed);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  transition: var(--transition);
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
-.db-kelola-item:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
-.db-kelola-item.db-kelola-admin {
-  flex: 1 1 100%;
-  flex-direction: row;
+.db-kelola-row:last-child {
+  border-bottom: none;
+}
+.db-kelola-row:hover {
+  background: rgba(27, 94, 55, 0.03);
+  padding-left: 24px;
+}
+.db-kelola-row-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 12px;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
 }
-.db-kelola-icon {
-  width: 44px; height: 44px;
+.db-kelola-row:hover .db-kelola-row-icon {
+  transform: scale(1.08);
+}
+.db-kelola-row-icon .material-icons {
+  font-size: 20px;
+}
+.db-kelola-row-body {
+  flex: 1;
+  min-width: 0;
+}
+.db-kelola-row-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--c-text-dark, #2D2D2D);
+  margin-bottom: 1px;
+}
+.db-kelola-row-desc {
+  font-size: 11.5px;
+  color: var(--c-text-grey, #6B7B73);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.db-kelola-row-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
   border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 4px;
+  margin-right: 4px;
 }
-.db-kelola-icon .material-icons { font-size: 22px; }
-.db-kelola-lbl { font-size: 12px; font-weight: 700; color: var(--c-text-dark); }
-.db-kelola-cnt { font-size: 11px; color: var(--c-text-grey); }
+.db-kelola-row-arrow {
+  color: var(--c-text-light, #ABB8B0);
+  transition: transform .2s, color .2s;
+  font-size: 20px;
+}
+.db-kelola-row:hover .db-kelola-row-arrow {
+  transform: translateX(4px);
+  color: var(--c-primary, #1B5E37);
+}
 
-/* ── Approval card ──────────────────────────────────────────────── */
-.db-approval-card {
-  margin-top: 14px;
-  background: var(--c-white);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  box-shadow: var(--shadow-card);
-  display: flex; align-items: center; gap: 14px;
-  cursor: pointer; transition: var(--transition);
+/* Extra colors for icons */
+.bg-purple { background: rgba(106, 27, 154, 0.1); }
+.text-purple { color: #6A1B9A !important; }
+
+.bg-yellow { background: rgba(176, 125, 0, 0.1); }
+.text-yellow { color: #B07D00 !important; }
+
+.bg-pink { background: rgba(233, 30, 99, 0.1); }
+.text-pink { color: #E91E63 !important; }
+
+/* ── Info bar ── */
+.info-bar-new {
+  background: var(--c-primary-light, #E8F5ED);
+  border: 1px dashed rgba(27, 94, 55, 0.3);
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 11.5px;
+  color: var(--c-primary-dark, #0F3D22);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  box-shadow: inset 0 1px 2px rgba(27, 94, 55, 0.05);
 }
-.db-approval-card:hover { box-shadow: var(--shadow-lg); }
-.db-approval-icon {
-  width: 46px; height: 46px;
-  background: #FFF3CD;
+.info-bar-new .material-icons {
+  font-size: 18px;
+  color: var(--c-primary, #1B5E37);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Approval card ── */
+.db-approval-card-new {
+  background: var(--c-white, #fff);
+  border: 1px solid var(--c-border, #dde6e0);
+  border-radius: 18px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 16px rgba(15, 61, 34, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.db-approval-card-new:hover {
+  background: rgba(230, 126, 0, 0.02);
+  border-color: var(--c-orange, #E67E00);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(230, 126, 0, 0.1);
+}
+.db-approval-row-icon {
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  position: relative; flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  background: rgba(230, 126, 0, 0.1);
+  color: var(--c-orange, #E67E00);
+  transition: transform 0.25s ease;
 }
-.db-dot {
-  position: absolute; top: -3px; right: -3px;
-  width: 10px; height: 10px;
-  background: var(--c-red); border-radius: 50%;
+.db-approval-card-new:hover .db-approval-row-icon {
+  transform: scale(1.08);
 }
-.db-approval-title { font-size: 14px; font-weight: 700; }
-.db-approval-sub   { font-size: 12px; color: var(--c-text-grey); margin-top: 2px; }
+.db-dot-new {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--c-red, #D32F2F);
+  border-radius: 50%;
+  border: 2px solid var(--c-white, #ffffff);
+}
+.db-approval-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--c-text-dark, #2D2D2D);
+}
+.db-approval-sub {
+  font-size: 11.5px;
+  color: var(--c-text-grey, #6B7B73);
+}
+.db-approval-arrow {
+  color: var(--c-text-light, #ABB8B0);
+  transition: transform 0.2s, color 0.2s;
+  font-size: 20px;
+}
+.db-approval-card-new:hover .db-approval-arrow {
+  transform: translateX(4px);
+  color: var(--c-orange, #E67E00);
+}
 
-/* ── Tablet (≥ 600px): already grid, just increase gap ──────────── */
-@media (min-width: 600px) {
-  .db-stat-row { gap: 14px; }
-  #gps-map { height: 300px; }
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+  background: var(--c-white, #fff) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(15, 61, 34, 0.12) !important;
+  border: 1px solid var(--c-border, #dde6e0) !important;
+  padding: 4px !important;
+}
+.leaflet-popup-content {
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 12px !important;
+  color: var(--c-text-dark, #2D2D2D) !important;
+  line-height: 1.4 !important;
+}
+.leaflet-popup-tip {
+  background: var(--c-white, #fff) !important;
+  border: 1px solid var(--c-border, #dde6e0) !important;
 }
 
-/* ── Desktop 2-Column Layout (≥ 768px) ──────────────────────────── */
+/* ── Desktop Layout Media Queries ── */
 @media (min-width: 768px) {
+  .db-hero-card {
+    padding: 36px 32px;
+    border-radius: 24px;
+    margin-bottom: 28px;
+  }
+  .db-hero-name {
+    font-size: 34px;
+  }
+  .db-hero-desc {
+    font-size: 13px;
+  }
+  .db-hero-icon-bg {
+    font-size: 88px !important;
+  }
 
-  /* Greeting bigger */
-  .db-greeting { margin-bottom: 28px; }
-  .db-greet-name  { font-size: 36px; }
-  .db-greet-small { font-size: 14px; }
-
-  /* Stat row: equal 3 columns on desktop too */
-  .db-stat-row {
-    grid-template-columns: 1fr 1fr 1fr;
+  .db-stat-grid {
+    grid-template-columns: repeat(3, 1fr);
     gap: 18px;
     margin-bottom: 28px;
   }
-  .db-stat-bus { padding: 22px 18px; border-radius: 18px; }
-  .db-stat-icon-bus { width: 50px; height: 50px; margin-bottom: 8px; }
-  .db-stat-icon-bus .material-icons { font-size: 26px; }
-  .db-stat-val { font-size: 40px; }
-  .db-stat-lbl { font-size: 13px; }
-  .db-stat-sub { font-size: 12px; }
+  .db-card-stat {
+    padding: 20px 22px;
+    border-radius: 18px;
+  }
+  .db-card-stat-icon {
+    width: 48px;
+    height: 48px;
+  }
+  .db-card-stat-val {
+    font-size: 26px;
+  }
 
-  .db-stat-white { padding: 20px 18px; border-radius: 18px; }
-  .db-stat-icon-sm { width: 40px; height: 40px; border-radius: 12px; margin-bottom: 8px; }
-  .db-stat-icon-sm .material-icons { font-size: 20px !important; }
-  .db-stat-num  { font-size: 28px; }
-  .db-stat-lbl2 { font-size: 13px; }
-  .db-stat-sub2 { font-size: 12px; }
-
-  /* Section headers */
-  .db-section-header { font-size: 17px; margin-bottom: 14px; }
-  .db-link-btn { font-size: 13px; }
-
-  /* ── 2-Column grid ── */
   .db-desktop-grid {
     display: grid;
-    grid-template-columns: 1fr 360px;
-    gap: 24px;
+    grid-template-columns: 1fr 380px;
+    gap: 28px;
     align-items: start;
   }
-
-  /* Right column: card panel background */
   .db-col-right {
     margin-top: 0;
-    background: var(--c-white);
-    border-radius: 20px;
-    box-shadow: var(--shadow-card);
+    background: #ffffff;
+    border-radius: 22px;
+    box-shadow: 0 4px 20px rgba(15, 61, 34, 0.04);
+    border: 1px solid #dde6e0;
     padding: 24px;
   }
-
-  /* Right column section header — smaller, muted */
-  .db-col-right .db-section-header {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--c-text-grey);
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    margin-bottom: 14px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--c-divider);
-  }
-
-  /* Right panel kelola items: 2×2 grid */
-  .db-col-right .db-kelola-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .db-col-right .db-kelola-item {
-    padding: 18px 12px 14px;
-    border-radius: 14px;
-    box-shadow: none;
-    background: var(--c-bg);
-    border: 1px solid var(--c-divider);
-  }
-  .db-col-right .db-kelola-item:hover {
-    background: var(--c-primary-light);
-    border-color: var(--c-primary);
-    box-shadow: none;
-  }
-  .db-col-right .db-kelola-row .db-kelola-admin {
-    grid-column: span 2;
-    flex-direction: row;
-    justify-content: center;
-    gap: 12px;
-    padding: 12px 20px;
-  }
-  .db-kelola-icon { width: 46px; height: 46px; border-radius: 12px; margin-bottom: 6px; }
-  .db-kelola-icon .material-icons { font-size: 22px; }
-  .db-kelola-lbl { font-size: 13px; }
-  .db-kelola-cnt { font-size: 12px; }
-
-  /* Right panel info bar */
-  .db-col-right .info-bar {
-    margin-top: 16px;
-    border-radius: 12px;
-    padding: 12px 14px;
-    font-size: 12px;
-  }
-
-  /* Approval card inside right panel */
-  .db-col-right .db-approval-card {
-    margin-top: 14px;
-    border-radius: 14px;
-    padding: 16px;
-    gap: 14px;
-    box-shadow: none;
-    background: var(--c-bg);
-    border: 1px solid var(--c-divider);
-  }
-  .db-col-right .db-approval-card:hover {
-    background: var(--c-primary-light);
-    border-color: var(--c-primary);
-  }
-  .db-approval-icon { width: 48px; height: 48px; border-radius: 12px; }
-  .db-approval-title { font-size: 14px; }
-  .db-approval-sub   { font-size: 12px; }
-
-  /* Map taller */
   #gps-map { height: 360px; }
-  .db-map-card { border-radius: 18px; }
-
-  /* Bus list */
-  .db-bus-item { padding: 12px 16px; }
-
-  /* Left col section header normal */
-  .db-col-left .db-section-header {
-    font-size: 17px;
-    color: var(--c-text-dark);
-    text-transform: none;
-    letter-spacing: normal;
-    border-bottom: none;
-    padding-bottom: 0;
-  }
 }
 
-/* ── Wide Desktop (≥ 1280px) ────────────────────────────────────── */
 @media (min-width: 1280px) {
   .db-desktop-grid {
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 1fr 420px;
     gap: 32px;
   }
-  .db-col-right { padding: 28px; }
-  #gps-map { height: 440px; }
-  .db-stat-row { gap: 22px; }
-}
-
-/* ── Mobile small (< 380px) ─────────────────────────────────────── */
-@media (max-width: 380px) {
-  .db-kelola-lbl { font-size: 11px; }
-  .db-kelola-icon { width: 38px; height: 38px; }
-  .db-kelola-icon .material-icons { font-size: 19px; }
-  .db-stat-val { font-size: 26px; }
-  .db-stat-num { font-size: 18px; }
+  #gps-map { height: 420px; }
 }
 </style>
 
@@ -602,32 +841,32 @@ function processGpsData(buses) {
       const driver = b.driver_name ?? b.driver?.name ?? '—';
       
       const busPhotoHtml = b.photo_url 
-        ? `<img src="${proxyImgUrl(b.photo_url)}" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0" alt="${name}">`
-        : `<div class="db-bus-icon" style="background:${isOn ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'}">
-            <span class="material-icons" style="color:${isOn ? '#4CAF50' : '#F44336'};font-size:18px">directions_bus</span>
+        ? `<img src="${proxyImgUrl(b.photo_url)}" class="db-bus-photo" alt="${name}">`
+        : `<div class="db-bus-icon ${isOn ? 'online' : 'offline'}">
+            <span class="material-icons" style="font-size:20px">directions_bus</span>
           </div>`;
 
       if (isOn) {
-        listHtml += `<div class="db-bus-item" style="border-left: 3px solid #4CAF50; margin-bottom: 6px;">
+        listHtml += `<div class="db-bus-item bus-online">
           ${busPhotoHtml}
-          <div style="flex:1">
-            <div style="font-weight:700;font-size:13px">${name}</div>
-            <div style="font-size:12px;color:var(--c-text-grey)">${driver}</div>
+          <div style="flex:1; min-width:0">
+            <div class="db-bus-name">${name}</div>
+            <div class="db-bus-driver">${driver}</div>
           </div>
-          <div style="text-align:right">
-            <span class="live-badge" style="background:#4CAF50;padding:2px 6px;border-radius:4px;color:#fff;font-size:10px;font-weight:600">LIVE</span>
-            <div style="font-size:13px;font-weight:700;margin-top:3px">${speed} km/h</div>
+          <div style="text-align:right; flex-shrink:0">
+            <span class="db-bus-badge online">LIVE</span>
+            <div class="db-bus-speed">${speed} km/h</div>
           </div>
         </div>`;
       } else {
-        listHtml += `<div class="db-bus-item" style="border-left: 3px solid #F44336; margin-bottom: 6px; opacity: 0.8;">
+        listHtml += `<div class="db-bus-item bus-offline">
           ${busPhotoHtml}
-          <div style="flex:1">
-            <div style="font-weight:700;font-size:13px;color:var(--c-text-grey)">${name}</div>
-            <div style="font-size:12px;color:var(--c-text-grey)">${driver}</div>
+          <div style="flex:1; min-width:0">
+            <div class="db-bus-name">${name}</div>
+            <div class="db-bus-driver">${driver}</div>
           </div>
-          <div style="text-align:right">
-            <span class="live-badge" style="background:#F44336;padding:2px 6px;border-radius:4px;color:#fff;font-size:10px;font-weight:600">OFFLINE</span>
+          <div style="text-align:right; flex-shrink:0">
+            <span class="db-bus-badge offline">OFFLINE</span>
           </div>
         </div>`;
       }
@@ -635,7 +874,7 @@ function processGpsData(buses) {
   }
 
   const busListEl = document.getElementById('bus-list');
-  if (busListEl) busListEl.innerHTML = `<div style="padding:8px 12px 12px">${listHtml}</div>`;
+  if (busListEl) busListEl.innerHTML = listHtml;
 }
 
 // ── SSE Connection dengan auto-reconnect ──────────────────────────

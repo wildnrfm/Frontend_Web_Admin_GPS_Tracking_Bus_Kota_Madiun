@@ -8,22 +8,76 @@
 @endsection
 @section('content')
 
-<div class="filter-bar">
-  <div class="search-box">
-    <span class="material-icons">search</span>
-    <input type="text" id="search" placeholder="Cari kode bus, plat nomor..." oninput="debounce(loadBus,400)()">
-  </div>
-  <button class="btn btn-icon" onclick="loadBus()"><span class="material-icons">refresh</span></button>
-</div>
-
-<div style="padding:12px 14px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--c-border)">
-  <button class="filter-btn active" data-filter="all" onclick="setBusFilter('all', this)">Semua</button>
-  <button class="filter-btn" data-filter="aktif" onclick="setBusFilter('aktif', this)">Aktif</button>
-  <button class="filter-btn" data-filter="maintenance" onclick="setBusFilter('maintenance', this)">Perawatan</button>
-  <button class="filter-btn" data-filter="non_aktif" onclick="setBusFilter('non_aktif', this)">Nonaktif</button>
-</div>
-
 <style>
+/* ╔══════════════════════════════════════════════════════════════╗ */
+/* ║              BUS PAGE REDESIGN STYLES                         ║ */
+/* ╚══════════════════════════════════════════════════════════════╝ */
+
+/* Hero Card - Green Gradient (Bus Theme) */
+.bus-hero {
+  background: linear-gradient(135deg, #0F3D22 0%, #1B5E37 60%, #2E7D52 100%);
+  border-radius: 20px;
+  padding: 28px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(15, 61, 34, 0.24);
+  margin-bottom: 24px;
+}
+.bus-hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+.bus-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: -40px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+.bus-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  z-index: 2;
+}
+.bus-hero-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.bus-hero-text h2 {
+  margin: 0; font-size: 24px; font-weight: 700; color: #fff;
+  letter-spacing: -0.3px;
+}
+.bus-hero-text p {
+  margin: 4px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.75);
+}
+
+/* Filter Bar Improvements */
+.bus-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 0;
+  flex-wrap: wrap;
+}
+.bus-filter-bar .search-box {
+  flex: 1;
+  min-width: 220px;
+}
+
 .filter-btn {
   padding: 8px 16px;
   border: 1px solid var(--c-border);
@@ -36,12 +90,14 @@
   transition: all 200ms;
 }
 .filter-btn.active {
-  background: var(--c-primary);
-  border-color: var(--c-primary);
+  background: linear-gradient(135deg, #0F3D22 0%, #2E7D52 100%);
+  border-color: transparent;
   color: white;
+  box-shadow: 0 4px 12px rgba(15, 61, 34, 0.25);
 }
-.filter-btn:hover {
-  border-color: var(--c-primary);
+.filter-btn:hover:not(.active) {
+  border-color: #1B5E37;
+  background: rgba(30, 90, 56, 0.08);
 }
 
 /* ── Modal Fullscreen (Ubah Rute) ─── */
@@ -80,12 +136,12 @@
   box-sizing: border-box;
 }
 .photo-upload-zone:hover {
-  border-color: var(--c-primary);
-  background: var(--c-primary-light);
+  border-color: rgba(46, 125, 82, 0.8);
+  background: rgba(222, 244, 230, 0.96);
 }
 .photo-upload-zone .material-icons {
   font-size: 32px;
-  color: var(--c-primary);
+  color: #1B5E37;
   transition: transform 0.2s ease;
 }
 .photo-upload-zone:hover .material-icons {
@@ -140,6 +196,31 @@
 }
 </style>
 
+{{-- Hero Card --}}
+<div class="bus-hero">
+  <div class="bus-hero-top">
+    <div class="bus-hero-icon"><span class="material-icons">directions_bus</span></div>
+    <div class="bus-hero-text">
+      <h2>Manajemen Bus</h2>
+      <p>Kelola armada bus, rute, halte, dan status operasional</p>
+    </div>
+  </div>
+</div>
+
+{{-- Filter & Search Bar --}}
+<div class="bus-filter-bar">
+  <div class="search-box">
+    <span class="material-icons">search</span>
+    <input type="text" id="search" placeholder="Cari kode bus, plat nomor..." oninput="debounce(loadBus,400)()">
+  </div>
+  <button class="btn btn-icon" onclick="loadBus()"><span class="material-icons">refresh</span></button>
+  <div style="flex: 1;"></div>
+  <button class="filter-btn active" data-filter="all" onclick="setBusFilter('all', this)">Semua</button>
+  <button class="filter-btn" data-filter="aktif" onclick="setBusFilter('aktif', this)">Aktif</button>
+  <button class="filter-btn" data-filter="maintenance" onclick="setBusFilter('maintenance', this)">Perawatan</button>
+  <button class="filter-btn" data-filter="non_aktif" onclick="setBusFilter('non_aktif', this)">Nonaktif</button>
+</div>
+
 <div class="card" style="padding:0">
   <div class="table-wrap">
     <table>
@@ -157,17 +238,17 @@
 {{-- Modal Bus --}}
 <div class="modal-overlay" id="bus-modal">
   <div class="modal" style="max-width:580px; border-radius:16px; overflow:hidden;">
-    <div class="modal-header" style="background:#f8faf9; border-bottom:1px solid #eef2f0; padding:18px 24px;">
+    <div class="modal-header" style="background:linear-gradient(135deg, #0F3D22 0%, #1B5E37 100%); border-bottom:none; padding:18px 24px;">
       <div style="display:flex; align-items:center; gap:10px;">
-        <div style="width:40px; height:40px; border-radius:10px; background:var(--c-primary-light); color:var(--c-primary); display:flex; align-items:center; justify-content:center;">
+        <div style="width:40px; height:40px; border-radius:10px; background:rgba(255,255,255,0.18); color:#fff; display:flex; align-items:center; justify-content:center;">
           <span class="material-icons">directions_bus</span>
         </div>
         <div>
-          <div class="modal-title" id="bus-modal-title" style="font-weight:700; font-size:16px; color:var(--c-text-dark); margin:0;">Tambah Bus</div>
-          <div style="font-size:11px; color:var(--c-text-grey); margin-top:2px;">Lengkapi informasi detail armada bus sekolah</div>
+          <div class="modal-title" id="bus-modal-title" style="font-weight:700; font-size:16px; color:#fff; margin:0;">Tambah Bus</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.75); margin-top:2px;">Lengkapi informasi detail armada bus sekolah</div>
         </div>
       </div>
-      <button class="modal-close" onclick="closeModal('bus-modal')"><span class="material-icons">close</span></button>
+      <button class="modal-close" onclick="closeModal('bus-modal')" style="color:#fff"><span class="material-icons">close</span></button>
     </div>
     <div class="modal-body" style="padding:24px;">
       <form id="bus-form">
@@ -221,7 +302,7 @@
     </div>
     <div class="modal-footer" style="background:#f8faf9; border-top:1px solid #eef2f0; padding:16px 24px; display:flex; justify-content:flex-end; gap:12px;">
       <button class="btn btn-outline btn-sm" onclick="closeModal('bus-modal')" style="border-radius:8px;">Batal</button>
-      <button class="btn btn-primary btn-sm" onclick="saveBus()" style="border-radius:8px; background:var(--c-primary); border-color:var(--c-primary);">Simpan</button>
+      <button class="btn btn-primary btn-sm" onclick="saveBus()" style="border-radius:8px; background:linear-gradient(135deg, #0F3D22 0%, #1B5E37 100%); border:none;">Simpan</button>
     </div>
   </div>
 </div>

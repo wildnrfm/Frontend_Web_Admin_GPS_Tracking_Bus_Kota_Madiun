@@ -1,3 +1,15 @@
+@php
+  $topbarUser = session('admin_user');
+  $topbarPhotoUrl = '/images/admin/default.svg';
+  if ($topbarUser) {
+      if (!empty($topbarUser['photo_url'])) {
+          $path = parse_url($topbarUser['photo_url'], PHP_URL_PATH);
+          $topbarPhotoUrl = '/storage-proxy' . $path;
+      } elseif (!empty($topbarUser['photo'])) {
+          $topbarPhotoUrl = '/storage-proxy/' . ltrim($topbarUser['photo'], '/');
+      }
+  }
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -11,7 +23,183 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @stack('head')
+<style>
+/* ── Professional Clean Topbar Redesign ── */
+.topbar {
+  background: #ffffff !important;
+  border-bottom: 1.5px solid #e4ece8 !important;
+  box-shadow: 0 2px 12px rgba(15, 61, 34, 0.03) !important;
+  height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 24px !important;
+}
+
+/* Remove wrapper style from logo as requested */
+.topbar-logo-img {
+  border: none !important;
+  background: none !important;
+  padding: 0 !important;
+  width: 32px !important;
+  height: 32px !important;
+  object-fit: contain !important;
+  border-radius: 0 !important;
+}
+
+.topbar-brand {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  border-right: 1.5px solid #ebf0ed !important;
+  padding-right: 20px !important;
+  height: 32px !important;
+}
+
+.topbar-brand-name {
+  color: #1B5E37 !important;
+  font-weight: 800 !important;
+  font-size: 17px !important;
+  letter-spacing: -0.2px !important;
+}
+
+.topbar-title {
+  color: #2d3732 !important;
+  font-weight: 700 !important;
+  font-size: 15.5px !important;
+  padding-left: 8px !important;
+  opacity: 0.9 !important;
+}
+
+.topbar-user {
+  color: #2D2D2D !important;
+  background: #f4f8f6 !important;
+  border: 1px solid #dde6e0 !important;
+  border-radius: 20px !important;
+  padding: 4px 12px 4px 4px !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.topbar-user:hover {
+  background: #e8f5ed !important;
+  border-color: #c3d9cc !important;
+}
+
+.topbar-user .material-icons {
+  color: #6b7b73 !important;
+}
+
+.topbar-avatar {
+  background: #1B5E37 !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 12px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+
+.topbar-username {
+  color: #2d3732 !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+/* Professional White Dropdown with Forest Green Accents */
+.topbar-dropdown {
+  background: #ffffff !important;
+  border: 1px solid #dde6e0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(15, 61, 34, 0.08) !important;
+  top: 58px !important;
+}
+
+.topbar-dd-header {
+  border-bottom: 1px solid #ebf0ed !important;
+  padding: 16px 20px !important;
+  background: #f8faf9 !important;
+}
+
+.topbar-dd-header div:first-child {
+  color: #0F3D22 !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+}
+
+.topbar-dd-header div:last-child {
+  color: #6B7B73 !important;
+}
+
+.topbar-dropdown div[style*="uppercase"] {
+  color: #1B5E37 !important;
+  font-weight: 700 !important;
+  font-size: 9.5px !important;
+  letter-spacing: 0.8px !important;
+  opacity: 0.9 !important;
+}
+
+.topbar-dd-item {
+  color: #4A5568 !important;
+  transition: all 0.2s ease !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  padding: 12px 20px !important;
+}
+
+.topbar-dd-item:hover {
+  background: #E8F5ED !important;
+  color: #1B5E37 !important;
+  padding-left: 24px !important;
+}
+
+.topbar-dd-item .material-icons {
+  color: #1B5E37 !important;
+}
+
+.topbar-dd-item:hover .material-icons {
+  color: #1B5E37 !important;
+}
+
+.topbar-dd-logout {
+  color: #d32f2f !important;
+}
+
+.topbar-dd-logout .material-icons {
+  color: #d32f2f !important;
+}
+
+.topbar-dd-logout:hover {
+  background: #fee2e2 !important;
+  color: #b71c1c !important;
+}
+
+.topbar-dd-logout:hover .material-icons {
+  color: #b71c1c !important;
+}
+
+/* ── Bottom Nav Accents ── */
+#bn-bg-path {
+  fill: #ffffff !important;
+}
+
+.bn-fab {
+  background: linear-gradient(135deg, #0F3D22 0%, #1B5E37 60%, #2E7D52 100%) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 4px 18px rgba(15, 61, 34, 0.35) !important;
+}
+
+.bn-item.active {
+  color: #1B5E37 !important;
+}
+</style>
 </head>
+
 <body>
 <div class="admin-shell">
 
@@ -24,7 +212,12 @@
     <div class="topbar-title">@yield('page-title', 'Dashboard')</div>
     @yield('topbar-actions')
     <div class="topbar-user" id="topbar-user-btn">
-      <div class="topbar-avatar">{{ strtoupper(substr(session('admin_user.name','A'),0,1)) }}</div>
+      <div class="topbar-avatar">
+        <img src="{{ $topbarPhotoUrl }}" 
+             alt="" 
+             style="width:100%; height:100%; object-fit:cover; border-radius:50%;"
+             onerror="this.src='/images/admin/default.svg'">
+      </div>
       <span class="topbar-username hide-mobile">{{ session('admin_user.name','Admin') }}</span>
       <span class="material-icons" style="font-size:16px;color:var(--c-text-grey)">expand_more</span>
     </div>
