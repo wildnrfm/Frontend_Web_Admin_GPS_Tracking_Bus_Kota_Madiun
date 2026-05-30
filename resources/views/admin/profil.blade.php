@@ -79,12 +79,9 @@
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
-  cursor: pointer;
   position: relative;
-  transition: border-color .25s;
   box-shadow: 0 4px 16px rgba(0,0,0,.22);
 }
-.profil-avatar:hover { border-color: rgba(255,255,255,.6); }
 .profil-avatar-img {
   width: 100%;
   height: 100%;
@@ -92,15 +89,6 @@
   border-radius: 50%;
   display: block;
 }
-.profil-avatar-overlay {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,.38);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity .25s;
-}
-.profil-avatar:hover .profil-avatar-overlay { opacity: 1; }
-.profil-avatar-overlay .material-icons { font-size: 22px; color: #fff; }
 
 
 .profil-info { flex: 1; min-width: 0; }
@@ -296,15 +284,12 @@
     <div class="profil-hero-top">
 
       {{-- Avatar: img tag with default fallback on error --}}
-      <div class="profil-avatar" id="profil-avatar-el" onclick="openAvatarModal()" title="Ubah avatar">
+      <div class="profil-avatar" id="profil-avatar-el">
         <img src="{{ $photoUrl }}" 
              alt="" 
              id="profil-avatar-img"
              class="profil-avatar-img"
              onerror="this.src='/images/admin/default.svg'">
-        <div class="profil-avatar-overlay">
-          <span class="material-icons">camera_alt</span>
-        </div>
       </div>
 
 
@@ -324,11 +309,11 @@
     <div class="profil-hero-stats">
       <div class="hero-stat">
         <div class="hero-stat-val" id="sys-bus">—</div>
-        <div class="hero-stat-lbl">Armada Bus</div>
+        <div class="hero-stat-lbl">Bus</div>
       </div>
       <div class="hero-stat">
         <div class="hero-stat-val" id="sys-driver">—</div>
-        <div class="hero-stat-lbl">Driver Aktif</div>
+        <div class="hero-stat-lbl">Driver</div>
       </div>
       <div class="hero-stat">
         <div class="hero-stat-val" id="sys-siswa">—</div>
@@ -381,25 +366,7 @@
             <div class="menu-row-icon"><span class="material-icons">edit</span></div>
             <div class="menu-row-body">
               <div class="menu-row-title">Edit Profil</div>
-              <div class="menu-row-desc">Ubah nama, nomor HP, dan alamat</div>
-            </div>
-            <span class="material-icons menu-row-arrow">chevron_right</span>
-          </a>
-          <div class="menu-row" onclick="openAvatarModal()">
-            <div class="menu-row-icon"><span class="material-icons">account_circle</span></div>
-            <div class="menu-row-body">
-              <div class="menu-row-title">Ubah Avatar</div>
-              <div class="menu-row-desc">Ganti atau hapus foto profil</div>
-            </div>
-            <span class="material-icons menu-row-arrow">chevron_right</span>
-          </div>
-          <a href="{{ route('admin.profil.edit') }}#password" class="menu-row">
-            <div class="menu-row-icon" style="background:rgba(230,126,0,.1);color:#E67E00">
-              <span class="material-icons">lock</span>
-            </div>
-            <div class="menu-row-body">
-              <div class="menu-row-title">Ubah Password</div>
-              <div class="menu-row-desc">Perbarui kata sandi akun</div>
+              <div class="menu-row-desc">Ubah nama, nomor HP, alamat, avatar, dan password</div>
             </div>
             <span class="material-icons menu-row-arrow">chevron_right</span>
           </a>
@@ -418,62 +385,8 @@
   </div>
 </div>
 
-{{-- ── Avatar Modal ── --}}
-<div id="avatarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center;padding:16px">
-  <div style="background:#fff;border-radius:18px;padding:28px;width:100%;max-width:360px;box-shadow:0 16px 60px rgba(0,0,0,.25)">
-    <div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:20px;display:flex;align-items:center;gap:10px">
-      <span class="material-icons" style="color:#1B5E37;font-size:22px">account_circle</span>
-      Ubah Avatar
-    </div>
-
-    {{-- Preview: img tag with default fallback on error --}}
-    <div id="avatar-preview-wrap"
-      style="width:100px;height:100px;border-radius:50%;border:3px solid #1B5E37;
-             display:flex;align-items:center;justify-content:center;
-             margin:0 auto 18px;background:var(--c-primary-light,#E8F5ED);
-             overflow:hidden;position:relative;">
-      <img id="avatar-preview-img"
-           src="{{ $photoUrl }}"
-           alt=""
-           style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"
-           onerror="this.src='/images/admin/default.svg'">
-    </div>
-
-    <input type="file" id="avatar-input" accept="image/jpeg,image/png,image/jpg" style="display:none">
-
-    <button type="button" onclick="document.getElementById('avatar-input').click()"
-      style="width:100%;padding:11px;background:#1B5E37;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit">
-      <span class="material-icons" style="font-size:18px">image</span>
-      Pilih Foto Baru
-    </button>
-
-    @if(!empty($user['photo']))
-    <button type="button" onclick="deleteAvatar()"
-      style="width:100%;padding:11px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;font-family:inherit">
-      <span class="material-icons" style="font-size:18px">delete</span>
-      Hapus Avatar
-    </button>
-    @endif
-
-
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button type="button" onclick="closeAvatarModal()"
-        style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:10px;font-weight:600;cursor:pointer;font-size:13.5px;font-family:inherit">
-        Batal
-      </button>
-      <button type="button" onclick="uploadAvatar()"
-        style="flex:1;padding:11px;background:#1B5E37;color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:13.5px;font-family:inherit">
-        Simpan
-      </button>
-    </div>
-  </div>
-</div>
-
 @endsection
 @push('scripts')
-<style>
-#avatarModal[style*="flex"] { display: flex !important; }
-</style>
 <script>
 // ── Stats ──
 async function loadSysStats() {
@@ -481,7 +394,7 @@ async function loadSysStats() {
     const [busR, drvR, stuR, pendR] = await Promise.all([
       api.get('/buses'),
       api.get('/drivers'),
-      api.get('/students', { per_page: 1 }),
+      api.get('/students', { per_page: 1, approval_status: 'approved' }),
       api.get('/students/pending'),
     ]);
     const get = (r, ...keys) => {
@@ -504,73 +417,6 @@ function confirmLogout() {
   confirmDialog('Kamu yakin ingin keluar dari akun ini?', () => document.getElementById('logout-form').submit());
 }
 
-// ── Avatar Modal ──
-let avatarFile = null;
 
-function openAvatarModal() {
-  document.getElementById('avatarModal').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
-function closeAvatarModal() {
-  document.getElementById('avatarModal').style.display = 'none';
-  document.body.style.overflow = '';
-  avatarFile = null;
-}
-document.getElementById('avatarModal')?.addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeAvatarModal();
-});
-
-document.getElementById('avatar-input').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (!['image/jpeg','image/png','image/jpg'].includes(file.type)) {
-    toast('Format harus jpeg / png', 'error'); return;
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    toast('Ukuran foto maksimal 2MB', 'error'); return;
-  }
-  avatarFile = file;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = document.getElementById('avatar-preview-img');
-    if (img) img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-});
-
-
-async function refreshSessionAndReload() {
-  try {
-    await fetch('/profil/refresh-session', {
-      method: 'POST',
-      headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '' }
-    });
-  } catch(e) { /* ignore — session refresh is best-effort */ }
-  location.reload();
-}
-
-async function uploadAvatar() {
-  if (!avatarFile) { toast('Pilih foto terlebih dahulu', 'warn'); return; }
-  const fd = new FormData();
-  fd.append('photo', avatarFile);
-  try {
-    const res = await api.postForm('/auth/profile/photo', fd);
-    if (!res.ok) { toast(res.data?.message ?? 'Gagal upload', 'error'); return; }
-    toast('Avatar berhasil diperbarui');
-    closeAvatarModal();
-    setTimeout(refreshSessionAndReload, 600);
-  } catch(e) { toast('Terjadi kesalahan saat upload', 'error'); }
-}
-
-async function deleteAvatar() {
-  if (!confirm('Yakin hapus avatar?')) return;
-  try {
-    const res = await api.delete('/auth/profile/photo');
-    if (!res.ok) { toast(res.data?.message ?? 'Gagal menghapus', 'error'); return; }
-    toast('Avatar berhasil dihapus');
-    closeAvatarModal();
-    setTimeout(refreshSessionAndReload, 600);
-  } catch(e) { toast('Terjadi kesalahan saat menghapus', 'error'); }
-}
 </script>
 @endpush

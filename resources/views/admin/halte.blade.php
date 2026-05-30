@@ -140,8 +140,8 @@
           </div>
           
           <div class="form-group" style="margin-bottom:0">
-            <label class="form-label" style="font-weight:600;">Alamat Halte</label>
-            <input class="form-control" name="alamat" placeholder="Alamat lokasi halte" required style="border-radius:10px;">
+            <label class="form-label" style="font-weight:600;">Alamat Halte <span style="color:#999;font-weight:400">(opsional)</span></label>
+            <input class="form-control" name="alamat" placeholder="Alamat lokasi halte" style="border-radius:10px;">
           </div>
           
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
@@ -322,9 +322,12 @@ async function saveHalte() {
   const body = { 
     nama_halte: f.nama_halte.value, 
     latitude: document.getElementById('lat-input').value, 
-    longitude: document.getElementById('lng-input').value, 
-    alamat: f.alamat.value 
+    longitude: document.getElementById('lng-input').value
   };
+  // Hanya kirim alamat jika tidak kosong (untuk edit, jika kosong akan null/not included)
+  if (f.alamat.value.trim()) {
+    body.alamat = f.alamat.value;
+  }
   const res = editId ? await api.put('/haltes/' + editId, body) : await api.post('/haltes', body);
   res.ok ? (toast('Halte berhasil disimpan'), closeModal('halte-modal'), loadHalte(currentPage)) : toast(res.data?.message ?? 'Gagal', 'error');
 }

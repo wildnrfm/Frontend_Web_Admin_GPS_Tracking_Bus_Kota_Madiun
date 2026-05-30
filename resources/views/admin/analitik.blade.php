@@ -691,7 +691,7 @@
     <div style="margin-top:20px">
       <div class="section-header">Absensi Hari Ini</div>
       <div id="attendance-card" class="card" style="margin-bottom:16px;padding:20px">
-        <div class="loading-spinner" style="margin:0 auto"></div>
+        <div style="display:flex;justify-content:center;"><div class="loading-spinner"></div></div>
       </div>
     </div>
 
@@ -709,7 +709,7 @@
     <div style="margin-top:20px">
       <div class="section-header">Aktivitas Sistem (24 Jam)</div>
       <div id="activity-card" class="card" style="padding:16px;display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between">
-        <div class="loading-spinner" style="margin:0 auto"></div>
+        <div style="width:100%;display:flex;justify-content:center;padding:4px 0;"><div class="loading-spinner"></div></div>
       </div>
     </div>
 
@@ -837,7 +837,7 @@
           <span class="material-icons" style="color:var(--c-primary)">people</span>
         </div>
         <div class="stat-value" id="a-penumpang">—</div>
-        <div class="stat-label">PENUMPANG HARI INI</div>
+        <div class="stat-label" id="a-penumpang-label">PENUMPANG HARI INI</div>
         <div class="stat-sub" id="a-penumpang-sub"></div>
       </div>
     </div>
@@ -905,7 +905,7 @@
     <div style="margin-top:20px">
       <div class="section-header">Jenis Aktivitas (30 Hari)</div>
       <div id="activity-types" class="card" style="padding:20px">
-        <div class="loading-spinner" style="margin:0 auto"></div>
+        <div style="display:flex;justify-content:center;padding:20px;"><div class="loading-spinner"></div></div>
       </div>
     </div>
 
@@ -917,6 +917,18 @@
           <div class="loading-spinner"></div>
         </div>
       </div>
+      <div id="driver-pagination" style="padding:12px 14px"></div>
+    </div>
+
+    {{-- Daftar Siswa --}}
+    <div style="margin-top:20px">
+      <div class="section-header">Daftar Siswa</div>
+      <div id="student-list" class="card" style="padding:0">
+        <div style="padding:20px;display:flex;justify-content:center;">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+      <div id="student-pagination" style="padding:12px 14px"></div>
     </div>
   </div>
 </div>
@@ -927,8 +939,14 @@
 initTabs('analitik-tabs');
 let mode = 'harian';
 const dp = document.getElementById('date-picker');
-dp.value = new Date().toISOString().split('T')[0];
+const tzOffset = new Date().getTimezoneOffset() * 60000;
+dp.value = new Date(Date.now() - tzOffset).toISOString().split('T')[0];
 dp.addEventListener('change', loadAll);
+
+let allDrivers = [];
+let currentDriverPage = 1;
+let allStudents = [];
+let currentStudentPage = 1;
 
 function setMode(m) {
   mode = m;
@@ -953,6 +971,11 @@ function exportPDF() {
 }
 
 async function loadAll() {
+  allDrivers = [];
+  allStudents = [];
+  currentDriverPage = 1;
+  currentStudentPage = 1;
+
   const date = dp.value;
   const todayStr = new Date().toISOString().split('T')[0];
   document.getElementById('analitik-date-label').textContent = date === todayStr ? 'Hari ini' : date;
@@ -963,11 +986,13 @@ async function loadAll() {
   const actHeader = document.getElementById('activity-card')?.previousElementSibling;
   const usrHeader = document.getElementById('active-users-list')?.previousElementSibling;
   const loginActHeader = document.getElementById('login-activity')?.previousElementSibling;
+  const actTypesHeader = document.getElementById('activity-types')?.previousElementSibling;
   if (attHeader) attHeader.textContent = mode === 'harian' ? 'Absensi Hari Ini' : 'Absensi Pekan Ini';
   if (repHeader) repHeader.textContent = mode === 'harian' ? 'Laporan Driver Hari Ini' : 'Laporan Driver Pekan Ini';
   if (actHeader) actHeader.textContent = mode === 'harian' ? 'Aktivitas Sistem (24 Jam)' : 'Aktivitas Sistem (7 Hari)';
   if (usrHeader) usrHeader.textContent = mode === 'harian' ? 'Pengguna Paling Aktif (Hari Ini)' : 'Pengguna Paling Aktif (7 Hari terakhir)';
   if (loginActHeader) loginActHeader.textContent = mode === 'harian' ? 'Aktivitas Login (24 Jam)' : 'Aktivitas Login (7 Hari)';
+  if (actTypesHeader) actTypesHeader.textContent = mode === 'harian' ? 'Jenis Aktivitas (Hari Ini)' : 'Jenis Aktivitas (Pekan Ini)';
 
   // Display loading spinners
   if (document.getElementById('attendance-card')) {
@@ -977,10 +1002,25 @@ async function loadAll() {
     document.getElementById('report-card').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
   }
   if (document.getElementById('activity-card')) {
-    document.getElementById('activity-card').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
+    document.getElementById('activity-card').innerHTML = '<div style="width:100%;padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
   }
   if (document.getElementById('active-users-list')) {
     document.getElementById('active-users-list').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
+  }
+  if (document.getElementById('activity-types')) {
+    document.getElementById('activity-types').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
+  }
+  if (document.getElementById('armada-list')) {
+    document.getElementById('armada-list').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
+  }
+  if (document.getElementById('driver-list')) {
+    document.getElementById('driver-list').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
+  }
+  if (document.getElementById('student-list')) {
+    document.getElementById('student-list').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
+  }
+  if (document.getElementById('weekly-summary-list')) {
+    document.getElementById('weekly-summary-list').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
   }
 
   if (mode === 'harian') {
@@ -991,17 +1031,27 @@ async function loadAll() {
       loadActivity(date), 
       loadBusStats(), 
       loadArmadaList(), 
-      loadActivityChart(), 
-      loadDriverList()
+      loadActivityChart({ date }), 
+      loadDriverList(),
+      loadStudentList()
     ]);
   } else {
+    // Calculate week start and end dates
+    const baseDate = new Date(date);
+    const weekEnd = new Date(baseDate);
+    const weekStart = new Date(baseDate);
+    weekStart.setDate(baseDate.getDate() - 6);
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+
     await Promise.all([
       loadStats(date),
       loadWeekly(),
       loadBusStats(),
       loadArmadaList(),
-      loadActivityChart(),
-      loadDriverList()
+      loadActivityChart({ start_date: weekStartStr, end_date: weekEndStr }),
+      loadDriverList(),
+      loadStudentList()
     ]);
   }
 }
@@ -1035,16 +1085,16 @@ async function loadStats(date) {
     gpsOn = Array.isArray(gpsBuses) ? gpsBuses.filter(b => b.gps_status === 'on' || b.status === 'on').length : 0;
   }
 
-  const rawAttendance = attRes.data?.data ?? [];
+  const rawAttendance = (attRes.data?.data ?? []).filter(a => a.status === 'checked_in' || a.status === 'checked_out');
   const busIdsOperating = new Set(rawAttendance.filter(a => a.bus_id).map(a => a.bus_id));
   const busAktifCount = busIdsOperating.size;
 
   // Ringkasan stats
+  document.getElementById('s-bus').textContent = buses.length;
   if (mode === 'harian') {
-    document.getElementById('s-bus').textContent = busAktifCount;
-    document.getElementById('s-bus-sub').textContent = `${gpsOn} GPS aktif · ${buses.length} total`;
+    document.getElementById('s-bus-sub').textContent = `${busAktifCount} beroperasi · ${gpsOn} GPS aktif`;
   }
-  document.getElementById('s-siswa').textContent = siswaTotal;
+  document.getElementById('s-siswa').textContent = siswaAktif;
   document.getElementById('s-siswa-sub').textContent = `${siswaAktif} aktif · ${siswaPending} pending`;
   
   const activeDrivers = drivers.filter(d => !d.user?.is_suspended).length;
@@ -1061,7 +1111,7 @@ async function loadStats(date) {
   
   document.getElementById('p-driver').textContent = activeDrivers;
   if (driverSub) driverSub.textContent = `${drivers.length} total driver`;
-  document.getElementById('p-siswa').textContent = siswaTotal;
+  document.getElementById('p-siswa').textContent = siswaAktif;
   if (siswaSub) siswaSub.textContent = `${siswaAktif} aktif · ${siswaPending} pending`;
   if (adminCard) adminCard.textContent = adminTotal;
   if (adminSub) adminSub.textContent = 'Pengelola sistem';
@@ -1076,10 +1126,11 @@ async function loadStats(date) {
     }
 
     const total = buses.length;
+    const activeCount = buses.filter(b => b.status === 'aktif').length;
     const maint = buses.filter(b => b.status === 'maintenance').length;
     const checkoutCount = rawAttendance.filter(a => a.waktu_turun).length;
 
-    document.getElementById('a-aktif').textContent = busAktifCount;
+    document.getElementById('a-aktif').textContent = activeCount;
     document.getElementById('a-aktif-sub').textContent = `${total} total armada`;
     document.getElementById('a-gps').textContent = gpsOnCount;
     document.getElementById('a-gps-sub').textContent = `${total - gpsOnCount} GPS mati`;
@@ -1093,7 +1144,7 @@ async function loadStats(date) {
 
 async function loadAttendance(date) {
   const res = await api.get('/attendance', { date, per_page: 500 });
-  const raw = res.data?.data ?? [];
+  const raw = (res.data?.data ?? []).filter(r => r.status === 'checked_in' || r.status === 'checked_out');
   const checkout = raw.filter(r => r.waktu_turun).length;
   const checkin = raw.length - checkout;
   const checkoutPct = raw.length > 0 ? Math.round((checkout / raw.length) * 100) : 0;
@@ -1148,6 +1199,7 @@ async function loadReport(date) {
         <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px">Bus</th>
         <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px">Plat</th>
         <th style="text-align:center;padding:12px 16px;font-weight:600;font-size:12px">Penumpang</th>
+        <th style="text-align:center;padding:12px 16px;font-weight:600;font-size:12px">Waktu</th>
         <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px">Catatan</th>
       </tr>
     </thead>
@@ -1156,6 +1208,7 @@ async function loadReport(date) {
         <td style="padding:12px 16px;font-size:13px">${r.bus?.kode_bus ?? '-'}</td>
         <td style="padding:12px 16px;font-size:13px;font-weight:600">${r.bus?.plat_nomor ?? '-'}</td>
         <td style="text-align:center;padding:12px 16px"><b style="color:var(--c-primary);font-size:14px">${r.total_penumpang ?? 0}</b></td>
+        <td style="text-align:center;padding:12px 16px;font-size:12px;color:var(--c-text-grey);white-space:nowrap">${r.waktu_laporan ? '<span style="background:var(--c-primary-light,#e8f5e9);color:var(--c-primary);padding:2px 8px;border-radius:6px;font-weight:600">' + r.waktu_laporan + '</span>' : '-'}</td>
         <td style="padding:12px 16px;font-size:12px;color:var(--c-text-grey);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.catatan_driver ?? '-'}</td>
       </tr>`).join('')}
     </tbody>
@@ -1217,9 +1270,14 @@ async function loadActivity(date) {
       const role = u.user?.role ?? 'user';
       const count = u.activity_count ?? 0;
       const bgColor = colors[i % colors.length];
+      const photoUrl = u.user?.photo_url ? proxyImgUrl(u.user.photo_url) : null;
+      const avatarHtml = photoUrl
+        ? `<img src="${photoUrl}" alt="${initial}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+          + `<div style="display:none;width:44px;height:44px;border-radius:50%;background:${bgColor};align-items:center;justify-content:center;font-weight:700;color:white;font-size:16px;flex-shrink:0">${initial}</div>`
+        : `<div style="width:44px;height:44px;border-radius:50%;background:${bgColor};display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:16px;flex-shrink:0">${initial}</div>`;
       return `
         <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--c-divider);${i === topUsers.length - 1 ? 'border-bottom:none' : ''}">
-          <div style="width:44px;height:44px;border-radius:50%;background:${bgColor};display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:16px;flex-shrink:0">${initial}</div>
+          ${avatarHtml}
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;font-size:13px;color:var(--c-text-dark)">${u.user?.name ?? 'Pengguna'}</div>
             <div style="font-size:12px;color:var(--c-text-grey);text-transform:capitalize;margin-top:2px">${role}</div>
@@ -1231,8 +1289,8 @@ async function loadActivity(date) {
   }
 }
 
-async function loadActivityChart() {
-  const res = await api.get('/activity/dashboard'); // 30 days default
+async function loadActivityChart(params = {}) {
+  const res = await api.get('/activity/dashboard', params);
   const d = res.data?.data ?? res.data ?? {};
   const byType = d.activity_by_type ?? [];
   
@@ -1300,7 +1358,7 @@ async function loadArmadaList() {
   let operatingBusIds = new Set();
   if (mode === 'harian') {
     const attRes = await api.get('/attendance', { date, per_page: 500 });
-    const raw = attRes.data?.data ?? [];
+    const raw = (attRes.data?.data ?? []).filter(att => att.status === 'checked_in' || att.status === 'checked_out');
     raw.forEach(att => {
       if (att.bus_id) operatingBusIds.add(att.bus_id);
     });
@@ -1318,7 +1376,7 @@ async function loadArmadaList() {
     
     const attResults = await Promise.all(days.map(ds => api.get('/attendance', { date: ds, per_page: 200 })));
     attResults.forEach(res => {
-      const raw = res.data?.data ?? [];
+      const raw = (res.data?.data ?? []).filter(att => att.status === 'checked_in' || att.status === 'checked_out');
       raw.forEach(att => {
         if (att.bus_id) operatingBusIds.add(att.bus_id);
       });
@@ -1337,10 +1395,10 @@ async function loadArmadaList() {
     
     if (bus.status === 'maintenance') {
       statusText = 'Maintenance';
-      badgeClass = 'background:#E8F5E9;color:#2E7D32'; // Green variant
-    } else if (bus.status === 'tidak_aktif' || bus.status === 'non_aktif') {
-      statusText = 'Tidak Beroperasi';
-      badgeClass = 'background:#FFE5E5;color:#D32F2F'; // Red
+      badgeClass = 'background:#FFF8E1;color:#8E6C3A'; // Amber badge for maintenance
+    } else if (bus.status === 'tidak_aktif' || bus.status === 'non_aktif' || bus.status === 'nonaktif') {
+      statusText = 'Tidak Aktif';
+      badgeClass = 'background:#FFE5E5;color:#D32F2F'; // Red badge for inactive status
     } else {
       // Bus status is active ('aktif') in database
       const isOperating = operatingBusIds.has(bus.id);
@@ -1377,16 +1435,33 @@ async function loadArmadaList() {
   document.getElementById('armada-list').innerHTML = html;
 }
 
-async function loadDriverList() {
-  const res = await api.get('/drivers');
-  const drivers = res.data?.data ?? [];
-  
-  if (!drivers.length) {
+async function loadDriverList(page = 1) {
+  currentDriverPage = page;
+  if (!allDrivers.length) {
+    document.getElementById('driver-list').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
+    try {
+      const res = await api.get('/drivers', { per_page: 1000 });
+      allDrivers = res.data?.data ?? [];
+    } catch (err) {
+      console.error(err);
+      document.getElementById('driver-list').innerHTML = `<div class="empty-state" style="padding:20px"><span class="material-icons">error</span><p>Gagal memuat data driver</p></div>`;
+      return;
+    }
+  }
+
+  if (!allDrivers.length) {
     document.getElementById('driver-list').innerHTML = `<div class="empty-state" style="padding:20px"><span class="material-icons">badge</span><p>Tidak ada data driver</p></div>`;
+    document.getElementById('driver-pagination').innerHTML = '';
     return;
   }
 
-  const html = drivers.slice(0, 10).map(driver => {
+  const perPage = 5;
+  const total = allDrivers.length;
+  const start = (page - 1) * perPage;
+  const end = start + perPage;
+  const paginatedDrivers = allDrivers.slice(start, end);
+
+  const html = paginatedDrivers.map(driver => {
     const driverName = driver.user?.name ?? driver.name ?? '-';
     const isSuspended = driver.user?.is_suspended ?? false;
     
@@ -1414,6 +1489,76 @@ async function loadDriverList() {
   }).join('');
   
   document.getElementById('driver-list').innerHTML = html;
+
+  const last_page = Math.ceil(total / perPage);
+  const meta = {
+    total: total,
+    per_page: perPage,
+    current_page: page,
+    last_page: last_page
+  };
+  document.getElementById('driver-pagination').innerHTML = renderPagination(meta, p => loadDriverList(p));
+}
+
+async function loadStudentList(page = 1) {
+  currentStudentPage = page;
+  if (!allStudents.length) {
+    document.getElementById('student-list').innerHTML = '<div style="padding:20px;display:flex;justify-content:center;"><div class="loading-spinner"></div></div>';
+    try {
+      const res = await api.get('/students', { per_page: 1000, approval_status: 'approved' });
+      allStudents = res.data?.data ?? [];
+    } catch (err) {
+      console.error(err);
+      document.getElementById('student-list').innerHTML = `<div class="empty-state" style="padding:20px"><span class="material-icons">error</span><p>Gagal memuat data siswa</p></div>`;
+      return;
+    }
+  }
+
+  if (!allStudents.length) {
+    document.getElementById('student-list').innerHTML = `<div class="empty-state" style="padding:20px"><span class="material-icons">school</span><p>Tidak ada data siswa</p></div>`;
+    document.getElementById('student-pagination').innerHTML = '';
+    return;
+  }
+
+  const perPage = 5;
+  const total = allStudents.length;
+  const start = (page - 1) * perPage;
+  const end = start + perPage;
+  const paginatedStudents = allStudents.slice(start, end);
+
+  const html = paginatedStudents.map(student => {
+    const studentName = student.user?.name ?? student.name ?? '-';
+    const isSuspended = student.user?.is_suspended ?? false;
+    const busDisplay = student.kode_bus ? `${student.kode_bus} · ${student.nama_halte || '-'}` : 'Belum naik bus';
+    
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--c-divider)">
+        <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#f0f4f2; border:1px solid #dde6e0; flex-shrink:0;">
+          <img src="${student.user?.photo_url ? proxyImgUrl(student.user.photo_url) : '/images/siswa/default.svg'}" 
+               alt="" 
+               style="width:100%; height:100%; object-fit:cover;"
+               onerror="this.src='/images/siswa/default.svg'">
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px">${studentName}</div>
+          <div style="font-size:11px;color:var(--c-text-grey)">${student.sekolah ?? '-'} · ${busDisplay}</div>
+        </div>
+        <div style="${!isSuspended ? 'background:var(--c-primary-light);color:var(--c-primary)' : 'background:#FFE5E5;color:#D32F2F'};padding:4px 12px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap">
+          ${!isSuspended ? 'Aktif' : 'Tidak Aktif'}
+        </div>
+      </div>`;
+  }).join('');
+  
+  document.getElementById('student-list').innerHTML = html;
+
+  const last_page = Math.ceil(total / perPage);
+  const meta = {
+    total: total,
+    per_page: perPage,
+    current_page: page,
+    last_page: last_page
+  };
+  document.getElementById('student-pagination').innerHTML = renderPagination(meta, p => loadStudentList(p));
 }
 
 async function loadBusStats() {}
@@ -1443,7 +1588,7 @@ async function loadWeekly() {
   const results = await Promise.all(days.map(async d => {
     const ds = d.toISOString().split('T')[0];
     const [a, r] = await Promise.all([api.get('/attendance', {date:ds, per_page:200}), api.get('/reports/admin', {tanggal:ds})]);
-    const raw = a.data?.data ?? [];
+    const raw = (a.data?.data ?? []).filter(att => att.status === 'checked_in' || att.status === 'checked_out');
     const rep = r.data?.data ?? r.data ?? {};
     return { 
       date: ds, 
@@ -1527,6 +1672,7 @@ async function loadWeekly() {
             <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px">Tanggal</th>
             <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px">Bus</th>
             <th style="text-align:center;padding:12px 16px;font-weight:600;font-size:12px">Penumpang</th>
+            <th style="text-align:center;padding:12px 16px;font-weight:600;font-size:12px">Waktu</th>
             <th style="text-align:left;padding:12px 16px;font-weight:600;font-size:12px">Catatan</th>
           </tr>
         </thead>
@@ -1538,6 +1684,7 @@ async function loadWeekly() {
               <td style="padding:12px 16px;font-size:13px;white-space:nowrap">${displayDate}</td>
               <td style="padding:12px 16px;font-size:13px">${r.bus?.kode_bus ?? '-'} (${r.bus?.plat_nomor ?? '-'})</td>
               <td style="text-align:center;padding:12px 16px"><b style="color:var(--c-primary);font-size:14px">${r.total_penumpang ?? 0}</b></td>
+              <td style="text-align:center;padding:12px 16px;font-size:12px;color:var(--c-text-grey);white-space:nowrap">${r.waktu_laporan ? '<span style="background:var(--c-primary-light,#e8f5e9);color:var(--c-primary);padding:2px 8px;border-radius:6px;font-weight:600">' + r.waktu_laporan + '</span>' : '-'}</td>
               <td style="padding:12px 16px;font-size:12px;color:var(--c-text-grey);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.catatan_driver ?? '-'}</td>
             </tr>`;
           }).join('')}
@@ -1599,9 +1746,14 @@ async function loadWeekly() {
         const role = u.user?.role ?? 'user';
         const count = u.activity_count ?? 0;
         const bgColor = colors[i % colors.length];
+        const photoUrl = u.user?.photo_url ? proxyImgUrl(u.user.photo_url) : null;
+        const avatarHtml = photoUrl
+          ? `<img src="${photoUrl}" alt="${initial}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+            + `<div style="display:none;width:44px;height:44px;border-radius:50%;background:${bgColor};align-items:center;justify-content:center;font-weight:700;color:white;font-size:16px;flex-shrink:0">${initial}</div>`
+          : `<div style="width:44px;height:44px;border-radius:50%;background:${bgColor};display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:16px;flex-shrink:0">${initial}</div>`;
         return `
           <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--c-divider);${i === topUsers.length - 1 ? 'border-bottom:none' : ''}">
-            <div style="width:44px;height:44px;border-radius:50%;background:${bgColor};display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:16px;flex-shrink:0">${initial}</div>
+            ${avatarHtml}
             <div style="flex:1;min-width:0">
               <div style="font-weight:600;font-size:13px;color:var(--c-text-dark)">${u.user?.name ?? 'Pengguna'}</div>
               <div style="font-size:12px;color:var(--c-text-grey);text-transform:capitalize;margin-top:2px">${role}</div>
@@ -1663,10 +1815,11 @@ async function loadWeekly() {
   const weeklyCheckoutCount = allWeeklyAttendance.filter(a => a.waktu_turun).length;
 
   // Ringkasan stats weekly update
-  document.getElementById('s-bus').textContent = weeklyBusAktif;
-  document.getElementById('s-bus-sub').textContent = `${totalBuses} total armada`;
+  document.getElementById('s-bus').textContent = totalBuses;
+  document.getElementById('s-bus-sub').textContent = `${weeklyBusAktif} beroperasi pekan ini`;
 
-  document.getElementById('a-aktif').textContent = weeklyBusAktif;
+  const activeCount = buses.filter(b => b.status === 'aktif').length;
+  document.getElementById('a-aktif').textContent = activeCount;
   document.getElementById('a-aktif-sub').textContent = `${totalBuses} total armada`;
   document.getElementById('a-gps').textContent = weeklyGpsOn;
   document.getElementById('a-gps-sub').textContent = `${totalBuses - weeklyGpsOn} GPS mati`;

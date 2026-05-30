@@ -26,29 +26,29 @@ class AnalitikController extends Controller
             ];
 
             try {
-                $studentData = ApiClient::get('/students', ['per_page' => 1]);
-                $stats['total_students'] = $studentData['meta']['total'] ?? 0;
+                $studentData = ApiClient::get('/students', ['per_page' => 1, 'approval_status' => 'approved']);
+                $stats['total_students'] = $studentData['pagination']['total'] ?? 0;
             } catch (\Exception $e) {
                 \Log::warning('Failed to fetch student count: ' . $e->getMessage());
             }
 
             try {
                 $busData = ApiClient::get('/buses', ['per_page' => 1]);
-                $stats['total_buses'] = $busData['meta']['total'] ?? 0;
+                $stats['total_buses'] = $busData['pagination']['total'] ?? 0;
             } catch (\Exception $e) {
                 \Log::warning('Failed to fetch bus count: ' . $e->getMessage());
             }
 
             try {
                 $driverData = ApiClient::get('/drivers', ['per_page' => 1]);
-                $stats['total_drivers'] = $driverData['meta']['total'] ?? 0;
+                $stats['total_drivers'] = $driverData['pagination']['total'] ?? 0;
             } catch (\Exception $e) {
                 \Log::warning('Failed to fetch driver count: ' . $e->getMessage());
             }
 
             try {
-                $stopData = ApiClient::get('/stops', ['per_page' => 1]);
-                $stats['total_stops'] = $stopData['meta']['total'] ?? 0;
+                $stopData = ApiClient::get('/haltes', ['per_page' => 1]);
+                $stats['total_stops'] = $stopData['pagination']['total'] ?? 0;
             } catch (\Exception $e) {
                 \Log::warning('Failed to fetch stop count: ' . $e->getMessage());
             }

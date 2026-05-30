@@ -194,6 +194,26 @@
   background: rgba(211, 47, 47, 1);
   transform: scale(1.1);
 }
+.siswa-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.siswa-list-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(25, 118, 210, 0.25);
+  box-shadow: 0 8px 20px rgba(17, 82, 147, 0.08);
+}
+.siswa-list-item button {
+  flex-shrink: 0;
+}
 </style>
 
 {{-- Hero Card --}}
@@ -207,6 +227,46 @@
   </div>
 </div>
 
+    {{-- Modal Replace Driver (select replacement) --}}
+    <div class="modal-overlay" id="replace-driver-modal" style="z-index:100120">
+      <div class="modal" style="max-width:520px">
+        <div class="modal-header">
+          <div class="modal-title">Ganti Driver</div>
+          <button class="modal-close" onclick="closeModal('replace-driver-modal')"><span class="material-icons">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div style="font-weight:700;margin-bottom:12px" id="replace-driver-status">Pilih driver pengganti</div>
+          <div class="form-group" style="margin-bottom:12px">
+            <div style="position:relative;">
+              <span class="material-icons" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#6b7280;font-size:20px">search</span>
+              <input id="replace-driver-search-input" type="text" class="form-control" placeholder="Cari nama driver atau NIK" style="padding-left:40px;border-radius:10px;width:100%;" oninput="debounce(filterReplaceDriverSearch,300)()" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:12px">
+            <div id="replace-driver-search-results" style="border:1px solid #e4e7eb;border-radius:12px;max-height:320px;overflow-y:auto;background:#fff"></div>
+            <div id="replace-driver-selected-label" style="margin-top:10px;font-size:13px;color:#6b7280">Belum ada driver dipilih</div>
+          </div>
+          <input type="hidden" id="replace-driver-id" value="">
+          <div class="form-group"><label class="form-label">Tanggal Mulai</label>
+            <input class="form-control" id="replace-start" type="date"></div>
+          <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-top:10px">
+            <label class="form-checkbox" style="margin:0">
+              <input type="checkbox" id="replace-finish-checkbox" onchange="toggleReplaceFinishDate()">
+              <span>Tambahkan tanggal selesai</span>
+            </label>
+          </div>
+          <div class="form-group" id="replace-finish-group" style="display:none;margin-top:10px">
+            <label class="form-label">Tanggal Selesai</label>
+            <input class="form-control" id="replace-finish" type="date">
+          </div>
+        </div>
+        <div class="modal-footer" style="justify-content:flex-end;gap:10px;">
+          <button class="btn btn-outline btn-sm" onclick="closeModal('replace-driver-modal')">Batal</button>
+          <button class="btn btn-primary btn-sm" id="replace-submit-button" onclick="saveReplaceAssign()">Simpan</button>
+        </div>
+      </div>
+    </div>
+
 {{-- Filter & Search Bar --}}
 <div class="bus-filter-bar">
   <div class="search-box">
@@ -218,13 +278,14 @@
   <button class="filter-btn active" data-filter="all" onclick="setBusFilter('all', this)">Semua</button>
   <button class="filter-btn" data-filter="aktif" onclick="setBusFilter('aktif', this)">Aktif</button>
   <button class="filter-btn" data-filter="maintenance" onclick="setBusFilter('maintenance', this)">Perawatan</button>
-  <button class="filter-btn" data-filter="non_aktif" onclick="setBusFilter('non_aktif', this)">Nonaktif</button>
+  <button class="filter-btn" data-filter="nonaktif" onclick="setBusFilter('nonaktif', this)">Nonaktif</button>
+  <button class="filter-btn" data-filter="no-driver" onclick="setBusFilter('no-driver', this)">No-Driver</button>
 </div>
 
 <div class="card" style="padding:0">
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Foto</th><th>Kode Bus</th><th>Plat Nomor</th><th>Status</th><th>GPS</th><th>Aksi</th></tr></thead>
+      <thead><tr><th>Foto</th><th>Kode Bus</th><th>Plat Nomor</th><th>Status</th><th>GPS</th><th>Driver</th><th>Aksi</th></tr></thead>
       <tbody id="bus-tbody">
         <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--c-text-grey)">
           <div class="loading-spinner" style="margin:0 auto 8px"></div>Memuat...
@@ -271,7 +332,7 @@
               <select class="form-control" name="status" style="border-radius:10px; cursor:pointer;">
                 <option value="aktif">🟢 Aktif</option>
                 <option value="maintenance">🟡 Perawatan</option>
-                <option value="non_aktif">🔴 Non-aktif</option>
+                <option value="nonaktif">🔴 Non-aktif</option>
               </select>
             </div>
           </div>
@@ -308,22 +369,50 @@
 </div>
 
 {{-- Modal Assign Driver --}}
-<div class="modal-overlay" id="assign-modal">
+<div class="modal-overlay" id="assign-modal" style="z-index:100110">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
       <div class="modal-title">Assign Driver</div>
       <button class="modal-close" onclick="closeModal('assign-modal')"><span class="material-icons">close</span></button>
     </div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">Pilih Driver</label>
-        <select class="form-control" id="assign-driver-select"><option value="">Pilih driver...</option></select>
+      <div id="assign-driver-status" style="margin-bottom:16px;font-weight:700;color:#111">Memuat driver...</div>
+      <div id="assign-driver-detail" style="display:none;padding:14px;border-radius:12px;background:#f3f6fb;color:#111;margin-bottom:16px"></div>
+      <div class="form-group" id="assign-driver-search-toggle" style="margin-bottom:14px;display:none">
+        <button type="button" class="btn btn-outline btn-sm" style="width:100%;border-radius:12px;justify-content:center;display:flex;align-items:center;gap:8px;" onclick="showAssignDriverSearchPanel()">
+          <span class="material-icons" style="font-size:18px">search</span>
+          Cari Driver Pengganti
+        </button>
       </div>
+      <div class="form-group" id="assign-driver-search-panel" style="margin-bottom:14px;display:none">
+        <label class="form-label" style="font-weight:600; color:var(--c-text-dark)">Cari Driver</label>
+        <div style="position:relative;">
+          <span class="material-icons" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#6b7280;font-size:20px">search</span>
+          <input id="assign-driver-search-input" type="text" class="form-control" placeholder="Cari nama driver atau NIK" style="padding-left:40px;border-radius:10px;width:100%;" oninput="debounce(filterAssignDriverSearch,300)()" />
+        </div>
+      </div>
+      <div class="form-group" id="assign-driver-search-results-panel" style="margin-bottom:12px;display:none">
+        <div id="assign-driver-search-results" style="border:1px solid #e4e7eb;border-radius:12px;max-height:220px;overflow-y:auto;background:#fff"></div>
+        <div id="assign-driver-selected-label" style="margin-top:10px;font-size:13px;color:#6b7280">Belum ada driver dipilih</div>
+      </div>
+      <input type="hidden" id="assign-driver-id" value="">
       <div class="form-group"><label class="form-label">Tanggal Mulai</label>
         <input class="form-control" id="assign-start" type="date"></div>
+      <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-top:10px">
+        <label class="form-checkbox" style="margin:0">
+          <input type="checkbox" id="assign-finish-checkbox" onchange="toggleAssignFinishDate()">
+          <span>Tambahkan tanggal selesai</span>
+        </label>
+      </div>
+      <div class="form-group" id="assign-finish-group" style="display:none;margin-top:10px">
+        <label class="form-label">Tanggal Selesai</label>
+        <input class="form-control" id="assign-finish" type="date">
+      </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="justify-content:flex-end;gap:10px;">
       <button class="btn btn-outline btn-sm" onclick="closeModal('assign-modal')">Batal</button>
-      <button class="btn btn-primary btn-sm" onclick="saveAssign()">Assign</button>
+      <button class="btn btn-primary btn-sm" id="assign-submit-button" onclick="saveAssign()">Simpan</button>
+      <button class="btn btn-outline btn-sm" id="assign-replace-button" onclick="openReplaceDriverModal()" style="display:none">Ganti Driver</button>
     </div>
   </div>
 </div>
@@ -378,24 +467,19 @@
     {{-- ── TOP HEADER BAR ── --}}
     <div style="display:flex;align-items:center;gap:16px;padding:0 24px;height:60px;background:#1B5E37;flex-shrink:0;z-index:10">
       <button onclick="closeEditRouteModal()"
-        style="background:rgba(255,255,255,.15);border:none;cursor:pointer;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;transition:background .2s"
+        style="background:rgba(255,255,255,.15);border:none;cursor:pointer;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;transition:background .2s;padding:0 12px;font-weight:700;gap:6px"
         onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
         <span class="material-icons" style="font-size:20px">arrow_back</span>
+        <span style="font-size:14px;letter-spacing:.2px">Kembali</span>
       </button>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:16px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="edit-route-title">Ubah Rute</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.7)" id="edit-route-subtitle">Atur halte dan urutan rute</div>
       </div>
       {{-- Route info badge --}}
       <div id="edit-route-info-badge" style="display:none;align-items:center;gap:6px;background:rgba(255,255,255,.15);border-radius:8px;padding:6px 12px">
         <span class="material-icons" style="font-size:15px;color:rgba(255,255,255,.8)">straighten</span>
         <span id="edit-route-distance" style="font-size:12px;color:white;font-weight:600"></span>
       </div>
-      <button onclick="saveEditRoute()" id="save-route-btn"
-        style="background:white;color:#1B5E37;border:none;border-radius:10px;padding:9px 22px;font-weight:700;font-size:13px;cursor:not-allowed;opacity:.5;display:flex;align-items:center;gap:6px;transition:all .2s;font-family:inherit" disabled>
-        <span class="material-icons" style="font-size:16px">check_circle</span>
-        <span id="save-route-btn-text">Pilih minimal 2 halte</span>
-      </button>
     </div>
 
     {{-- ── MAIN BODY: Map Left + Panel Right ── --}}
@@ -462,11 +546,17 @@
 
         {{-- Save footer --}}
         <div style="padding:14px;background:white;border-top:1px solid #e8e8e8;flex-shrink:0">
+          <div style="display:flex;gap:10px;align-items:center">
+          <button onclick="closeEditRouteModal()" type="button"
+            style="flex:1;padding:13px;border-radius:10px;border:1px solid #ccc;background:white;color:#333;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;font-family:inherit">
+            Batal
+          </button>
           <button onclick="saveEditRoute()" id="save-route-btn-bottom"
-            style="width:100%;padding:13px;border-radius:10px;border:none;font-weight:700;font-size:14px;cursor:not-allowed;background:#ccc;color:#888;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:inherit" disabled>
+            style="flex:1;padding:13px;border-radius:10px;border:none;font-weight:700;font-size:14px;cursor:not-allowed;background:#ccc;color:#888;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:inherit" disabled>
             <span class="material-icons" style="font-size:18px">check_circle</span>
             <span id="save-route-btn-text-2">Pilih minimal 2 halte</span>
           </button>
+        </div>
         </div>
       </div>
     </div>
@@ -481,7 +571,10 @@
       <button class="modal-close" onclick="closeModal('siswa-modal')"><span class="material-icons">close</span></button>
     </div>
     <div class="modal-body">
-      <div style="margin-bottom:12px">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px">
+          <input id="siswa-search-input" type="text" class="form-control" placeholder="Cari nama siswa..." style="width:100%;border-radius:10px;padding:10px" oninput="filterSiswaList()" />
+        </div>
         <button class="btn btn-primary btn-sm" onclick="openAddSiswaForm()">+ Tambah Siswa</button>
       </div>
       <div id="siswa-content" style="max-height:400px;overflow-y:auto"></div>
@@ -492,11 +585,155 @@
   </div>
 </div>
 
+{{-- Modal Tambah Siswa --}}
+<div class="modal-overlay" id="add-siswa-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title">Tambah Siswa ke <span id="add-siswa-bus-name"></span></div>
+      <button class="modal-close" onclick="closeModal('add-siswa-modal')"><span class="material-icons">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label" style="font-weight:600;color:var(--c-text-dark)">Cari Siswa</label>
+        <input id="add-siswa-search-input" type="text" class="form-control" placeholder="Cari nama atau email siswa" style="width:100%;border-radius:10px;padding:10px" oninput="filterAddSiswaSelect()" />
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <div id="add-siswa-search-results" style="border:1px solid #e4e7eb;border-radius:12px;max-height:220px;overflow-y:auto;background:#fff"></div>
+        <div id="add-siswa-selected-label" style="margin-top:8px;font-size:13px;color:#333"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label" style="font-weight:600;color:var(--c-text-dark)">Pilih Halte</label>
+        <select class="form-control" id="select-halte-to-add" style="width:100%;border-radius:10px;padding:10px"></select>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end;gap:10px">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('add-siswa-modal')">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="addSiswaToBus()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+{{-- Modal Student Detail --}}
+<div class="modal-overlay" id="student-detail-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Detail Siswa</div>
+      <button class="modal-close" onclick="closeModal('student-detail-modal')"><span class="material-icons">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:18px;flex-wrap:wrap">
+        <div style="width:72px;height:72px;border-radius:18px;overflow:hidden;background:#f0f0f0;flex-shrink:0;">
+          <img id="student-detail-photo" src="/images/siswa/default.svg" alt="Foto Siswa" style="width:100%;height:100%;object-fit:cover;">
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div id="student-detail-name" style="font-weight:700;font-size:16px;line-height:1.2">Nama Siswa</div>
+          <div id="student-detail-email" style="font-size:13px;color:var(--c-text-grey);margin-top:4px;word-break:break-all">Email siswa</div>
+        </div>
+      </div>
+      <div id="student-detail-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px">
+        <div style="background:#f8f9fa;padding:12px;border-radius:12px">
+          <div style="font-size:11px;color:#666;margin-bottom:4px">NIS</div>
+          <div id="student-detail-nis" style="font-weight:600;color:#111">-</div>
+        </div>
+        <div style="background:#f8f9fa;padding:12px;border-radius:12px">
+          <div style="font-size:11px;color:#666;margin-bottom:4px">Kelas</div>
+          <div id="student-detail-kelas" style="font-weight:600;color:#111">-</div>
+        </div>
+        <div style="background:#f8f9fa;padding:12px;border-radius:12px">
+          <div style="font-size:11px;color:#666;margin-bottom:4px">Sekolah</div>
+          <div id="student-detail-sekolah" style="font-weight:600;color:#111">-</div>
+        </div>
+        <div style="background:#f8f9fa;padding:12px;border-radius:12px">
+          <div style="font-size:11px;color:#666;margin-bottom:4px">Status</div>
+          <div id="student-detail-status" style="font-weight:600;color:#111">-</div>
+        </div>
+        <div style="background:#f8f9fa;padding:12px;border-radius:12px">
+          <div style="font-size:11px;color:#666;margin-bottom:4px">Bus</div>
+          <div id="student-detail-bus" style="font-weight:600;color:#111">-</div>
+        </div>
+        <div style="background:#f8f9fa;padding:12px;border-radius:12px">
+          <div style="font-size:11px;color:#666;margin-bottom:4px">Halte</div>
+          <div id="student-detail-halte" style="font-weight:600;color:#111">-</div>
+        </div>
+      </div>
+      <div style="padding:14px;background:#f8f9fa;border-radius:14px;">
+        <div style="font-size:12px;color:#666;margin-bottom:8px;font-weight:600">Alamat</div>
+        <div id="student-detail-alamat" style="font-size:13px;color:#222;white-space:pre-line;">-</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="removeStudentFromCurrentBus()">Hapus siswa dari bus</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('student-detail-modal')">Tutup</button>
+    </div>
+  </div>
+</div>
+
 @endsection
 @push('scripts')
 <script>
 let editId = null, assignBusId = null, currentPage = 1, currentFilter = 'all';
+let currentBusStudents = [];
+let currentBusName = '';
+let currentStudentDetailId = null;
+let addSiswaAvailableStudents = [];
+let addSiswaSelectedId = null;
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+function jsEscapedString(value) {
+  if (value === undefined || value === null) return "''";
+  return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}'`;
+}
+function renderAddSiswaSelect(students) {
+  const resultsContainer = document.getElementById('add-siswa-search-results');
+  const selectedLabel = document.getElementById('add-siswa-selected-label');
+  const searchInput = document.getElementById('add-siswa-search-input');
+
+  searchInput.disabled = false;
+  addSiswaSelectedId = null;
+  selectedLabel.textContent = 'Belum ada siswa dipilih';
+  selectedLabel.style.color = '#6b7280';
+
+  if (!students || students.length === 0) {
+    resultsContainer.innerHTML = '<div style="padding:12px;color:#6b7280">Tidak ada siswa tersedia</div>';
+    return;
+  }
+
+  resultsContainer.innerHTML = '';
+  students.forEach(siswa => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.style.width = '100%';
+    item.style.textAlign = 'left';
+    item.style.border = 'none';
+    item.style.background = 'transparent';
+    item.style.padding = '12px';
+    item.style.cursor = 'pointer';
+    item.style.display = 'block';
+    item.style.borderBottom = '1px solid #f0f0f0';
+    item.onmouseover = () => item.style.background = '#f8fafc';
+    item.onmouseout = () => item.style.background = 'transparent';
+    item.onclick = () => {
+      addSiswaSelectedId = siswa.id;
+      selectedLabel.textContent = `Siswa dipilih: ${siswa.user?.name || siswa.name || 'N/A'}${siswa.user?.email ? ' — ' + siswa.user.email : ''}`;
+      selectedLabel.style.color = '#111827';
+      Array.from(resultsContainer.children).forEach(child => child.style.background = 'transparent');
+      item.style.background = '#eef2ff';
+    };
+
+    const name = siswa.user?.name || siswa.name || 'N/A';
+    const email = siswa.user?.email || siswa.email || '';
+    item.textContent = email ? `${name} — ${email}` : name;
+    resultsContainer.appendChild(item);
+  });
+}
+function filterAddSiswaSelect() {
+  const query = document.getElementById('add-siswa-search-input').value.trim().toLowerCase();
+  const filtered = addSiswaAvailableStudents.filter(siswa => {
+    const name = (siswa.user?.name || siswa.name || '').toLowerCase();
+    const email = (siswa.user?.email || siswa.email || '').toLowerCase();
+    return name.includes(query) || email.includes(query);
+  });
+  renderAddSiswaSelect(filtered);
+}
 
 function setBusFilter(filter, btn) {
   currentFilter = filter;
@@ -508,18 +745,23 @@ function setBusFilter(filter, btn) {
 async function loadBus(page = 1) {
   currentPage = page;
   const q = document.getElementById('search').value;
-  const res = await api.get('/buses', { search: q, per_page: 1000 });
+  const res = await api.get('/buses', { search: q, per_page: 1000, _t: Date.now() });
   
   let rows = res.data?.data ?? [];
   
   // Apply filter
   if (currentFilter !== 'all') {
-    rows = rows.filter(b => b.status === currentFilter);
+    if (currentFilter === 'no-driver') {
+      const today = new Date().toISOString().split('T')[0];
+      rows = rows.filter(b => !(b.drivers ?? []).some(d => !d.pivot?.tanggal_selesai || d.pivot?.tanggal_selesai >= today));
+    } else {
+      rows = rows.filter(b => b.status === currentFilter);
+    }
   }
   
   const tbody = document.getElementById('bus-tbody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">directions_bus</span><p>Tidak ada bus</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="material-icons">directions_bus</span><p>Tidak ada bus</p></div></td></tr>`;
     document.getElementById('bus-pagination').innerHTML = ''; return;
   }
   
@@ -527,7 +769,10 @@ async function loadBus(page = 1) {
   const start = (page - 1) * perPage;
   const paginatedRows = rows.slice(start, start + perPage);
   
-  tbody.innerHTML = paginatedRows.map((b, i) => `
+  tbody.innerHTML = paginatedRows.map((b, i) => {
+    const activeDriver = (b.drivers ?? []).find(d => !d.pivot?.tanggal_selesai || d.pivot?.tanggal_selesai >= new Date().toISOString().split('T')[0]);
+    const driverLabel = activeDriver ? `<span style="font-size:12px;padding:4px 10px;border-radius:999px;background:#e7f5e6;color:#1b5e20">${activeDriver.user?.name ?? activeDriver.name ?? 'Driver Aktif'}</span>` : `<span style="font-size:12px;padding:4px 10px;border-radius:999px;background:#fff4e5;color:#b15f00">No Driver</span>`;
+    return `
     <tr>
       <td style="width:80px">
         ${b.photo_url ? `<img src="${proxyImgUrl(b.photo_url)}" style="width:60px;height:60px;object-fit:cover;border-radius:6px" alt="${b.kode_bus}">` : `<div style="width:60px;height:60px;background:#f0f0f0;border-radius:6px;display:flex;align-items:center;justify-content:center"><span class="material-icons" style="color:#ccc">image</span></div>`}
@@ -536,16 +781,18 @@ async function loadBus(page = 1) {
       <td>${b.plat_nomor}</td>
       <td>${statusBadge(b.status)}</td>
       <td><span class="badge ${b.gps_status === 'on' ? 'badge-green':'badge-grey'}">${b.gps_status === 'on' ? 'ON':'OFF'}</span></td>
+      <td>${driverLabel}</td>
       <td>
-        <div style="display:flex;gap:4px;flex-wrap:wrap">
-          <button class="btn btn-xs btn-outline" onclick="editBus(${b.id})">Edit</button>
-          <button class="btn btn-xs" style="background:var(--c-primary);color:white" onclick="openRouteHalte(${b.id},'${b.kode_bus}')">Rute & Halte</button>
-          <button class="btn btn-xs" style="background:#E3F0FB;color:var(--c-primary)" onclick="openSiswa(${b.id},'${b.kode_bus}')">Siswa</button>
-          <button class="btn btn-xs" style="background:#E3F0FB;color:var(--c-blue)" onclick="openAssign(${b.id})">Driver</button>
-          <button class="btn btn-xs btn-icon" onclick="deleteBus(${b.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn btn-xs btn-outline" onclick="editBus(${b.id})">Edit</button>
+          <button type="button" class="btn btn-xs" style="background:var(--c-primary);color:white" onclick="openRouteHalte(${b.id}, ${jsEscapedString(b.kode_bus)})">Rute</button>
+          <button type="button" class="btn btn-xs" style="background:#E3F0FB;color:var(--c-primary)" onclick="openSiswa(${b.id}, ${jsEscapedString(b.kode_bus)})">Siswa</button>
+          <button type="button" class="btn btn-xs" style="background:#E3F0FB;color:var(--c-blue)" onclick="openAssign(${b.id})">Driver</button>
+          <button type="button" class="btn btn-xs btn-icon" onclick="deleteBus(${b.id})"><span class="material-icons" style="font-size:14px">delete</span></button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   
   const totalPages = Math.ceil(rows.length / perPage);
   const paginationHtml = totalPages > 1 ? `
@@ -631,22 +878,438 @@ async function saveBus() {
   loadBus(currentPage);
 }
 
+let currentBusDriverAssignmentId = null;
+
 async function openAssign(busId) {
   assignBusId = busId;
-  const drRes = await api.get('/drivers', { per_page: 100 });
-  const drivers = drRes.data ?? [];
-  const sel = document.getElementById('assign-driver-select');
-  sel.innerHTML = `<option value="">Pilih driver...</option>` + drivers.map(d => `<option value="${d.id}">${d.user?.name ?? d.name}</option>`).join('');
-  document.getElementById('assign-start').value = new Date().toISOString().split('T')[0];
-  openModal('assign-modal');
+  currentBusDriverAssignmentId = null;
+  const statusEl = document.getElementById('assign-driver-status');
+  const detailEl = document.getElementById('assign-driver-detail');
+  const searchInput = document.getElementById('assign-driver-search-input');
+  const resultsContainer = document.getElementById('assign-driver-search-results');
+  const selectedLabel = document.getElementById('assign-driver-selected-label');
+  const hiddenDriverId = document.getElementById('assign-driver-id');
+  const submitBtn = document.getElementById('assign-submit-button');
+  const replaceBtn = document.getElementById('assign-replace-button');
+  const startInput = document.getElementById('assign-start');
+  const finishCheckbox = document.getElementById('assign-finish-checkbox');
+  const finishGroup = document.getElementById('assign-finish-group');
+  const finishInput = document.getElementById('assign-finish');
+  const searchPanel = document.getElementById('assign-driver-search-panel');
+  const resultsPanel = document.getElementById('assign-driver-search-results-panel');
+
+  statusEl.textContent = 'Memuat data driver...';
+  detailEl.style.display = 'none';
+  detailEl.innerHTML = '';
+  selectedLabel.textContent = 'Belum ada driver dipilih';
+  selectedLabel.style.color = '#6b7280';
+  hiddenDriverId.value = '';
+  searchInput.value = '';
+  resultsContainer.innerHTML = '<div style="padding:12px;color:#6b7280">Memuat daftar driver...</div>';
+  startInput.value = new Date().toISOString().split('T')[0];
+  finishCheckbox.checked = false;
+  finishGroup.style.display = 'none';
+  finishInput.value = '';
+  submitBtn.textContent = 'Simpan';
+  submitBtn.onclick = saveAssign;
+  replaceBtn.style.display = 'none';
+  searchPanel.style.display = 'none';
+  resultsPanel.style.display = 'none';
+
+    try {
+    // cache-bust to avoid stale responses and add debug logs for investigation
+    const cacheBust = { _t: Date.now() };
+    const [driverRes, drRes] = await Promise.all([
+      api.get(`/buses/${busId}/driver`, cacheBust, true),
+      api.get('/drivers', Object.assign({ per_page: 100 }, cacheBust), true)
+    ]);
+    console.debug('[openAssign] driverRes:', driverRes, 'driversRes:', drRes);
+
+    const assignedDriver = driverRes.ok ? driverRes.data?.data ?? driverRes.data : null;
+    const driverData = drRes.data?.data?.data ?? drRes.data?.data ?? drRes.data;
+    const drivers = Array.isArray(driverData) ? driverData : [];
+    const today = new Date().toISOString().split('T')[0];
+    const availableDrivers = drivers.filter(d => {
+      const hasActiveBus = (d.buses ?? []).some(b => {
+        const end = b.pivot?.tanggal_selesai;
+        return !end || end >= today;
+      });
+      return !hasActiveBus;
+    });
+
+    window.assignDriverCandidates = availableDrivers;
+    renderAssignDriverSearchResults(availableDrivers);
+
+    if (assignedDriver) {
+      currentBusDriverAssignmentId = assignedDriver.pivot?.id ?? null;
+      const currentName = assignedDriver.user?.name ?? assignedDriver.name ?? 'Driver aktif';
+      const currentNik = assignedDriver.nik ?? assignedDriver.user?.nik ?? '-';
+      const phone = assignedDriver.no_hp ?? assignedDriver.user?.no_hp ?? '-';
+      const email = assignedDriver.user?.email ?? assignedDriver.email ?? '-';
+      const startDate = assignedDriver.pivot?.tanggal_mulai ?? assignedDriver.tanggal_mulai ?? today;
+      const endDate = assignedDriver.pivot?.tanggal_selesai ?? '';
+      const status = assignedDriver.pivot?.gps_status ?? '-';
+
+      statusEl.textContent = `Driver aktif: ${currentName}`;
+      detailEl.style.display = 'block';
+      detailEl.innerHTML = `
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">
+          <div style="width:64px;height:64px;border-radius:16px;overflow:hidden;background:#f0f0f0;flex-shrink:0">
+            <img src="${assignedDriver.user?.photo_url ? proxyImgUrl(assignedDriver.user.photo_url) : '/images/driver/default.svg'}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='/images/driver/default.svg'" />
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:15px;font-weight:700">${currentName}</div>
+            <div style="font-size:13px;color:#4b5563;">${email}</div>
+            <div style="font-size:13px;color:#4b5563;">${phone}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;color:#334155;margin-bottom:14px">
+          <div><strong>NIK</strong><div>${currentNik}</div></div>
+          <div><strong>Status GPS</strong><div>${status}</div></div>
+          <div><strong>Tanggal Mulai</strong><div>${startDate}</div></div>
+          <div><strong>Tanggal Selesai</strong><div>${endDate || '-'}</div></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a href="https://wa.me/${formatWhatsAppNumber(phone)}" target="_blank" class="btn btn-primary btn-sm" style="background:#25D366;border-color:#25D366;color:white;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;">
+            <span class="material-icons" style="font-size:18px">chat</span> WhatsApp
+          </a>
+          <button type="button" class="btn btn-outline btn-sm" onclick="copyAssignDriverNumber('${phone}')" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;">
+            <span class="material-icons" style="font-size:18px">content_copy</span> Salin Nomor
+          </button>
+        </div>
+      `;
+      document.getElementById('assign-driver-search-toggle').style.display = 'none';
+      replaceBtn.style.display = 'inline-flex';
+      startInput.value = startDate;
+      if (endDate) {
+        finishCheckbox.checked = true;
+        finishGroup.style.display = 'block';
+        finishInput.value = endDate;
+      } else {
+        finishCheckbox.checked = false;
+        finishGroup.style.display = 'none';
+        finishInput.value = '';
+      }
+    } else {
+      statusEl.textContent = 'Bus ini belum ada driver. Tetapkan driver:';
+      detailEl.style.display = 'none';
+      submitBtn.textContent = 'Simpan';
+      submitBtn.onclick = saveAssign;
+      replaceBtn.style.display = 'none';
+      document.getElementById('assign-driver-search-toggle').style.display = 'block';
+      startInput.value = today;
+      finishCheckbox.checked = false;
+      finishGroup.style.display = 'none';
+      finishInput.value = '';
+    }
+
+    openModal('assign-modal');
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = 'Gagal memuat data driver';
+    resultsContainer.innerHTML = '<div style="padding:12px;color:#b91c1c">Gagal mencari driver</div>';
+    openModal('assign-modal');
+  }
+}
+
+function renderAssignDriverSearchResults(drivers) {
+  const container = document.getElementById('assign-driver-search-results');
+  const selectedLabel = document.getElementById('assign-driver-selected-label');
+  const hiddenDriverId = document.getElementById('assign-driver-id');
+  container.innerHTML = '';
+  if (!drivers.length) {
+    container.innerHTML = '<div style="padding:12px;color:#6b7280">Tidak ada driver tersedia untuk ditugaskan</div>';
+    hiddenDriverId.value = '';
+    selectedLabel.textContent = 'Belum ada driver dipilih';
+    selectedLabel.style.color = '#6b7280';
+    return;
+  }
+
+  drivers.forEach(driver => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.style.width = '100%';
+    item.style.textAlign = 'left';
+    item.style.border = 'none';
+    item.style.background = 'transparent';
+    item.style.padding = '14px';
+    item.style.cursor = 'pointer';
+    item.style.display = 'block';
+    item.style.borderBottom = '1px solid #f0f0f0';
+    item.onmouseover = () => item.style.background = '#f8fafc';
+    item.onmouseout = () => item.style.background = 'transparent';
+    item.onclick = () => {
+      hiddenDriverId.value = driver.id;
+      selectedLabel.textContent = `Driver dipilih: ${driver.user?.name ?? driver.name ?? 'N/A'}${driver.no_hp ? ' — ' + driver.no_hp : ''}`;
+      selectedLabel.style.color = '#111827';
+      Array.from(container.children).forEach(child => child.style.background = 'transparent');
+      item.style.background = '#eef2ff';
+    };
+
+    const name = driver.user?.name ?? driver.name ?? '-';
+    const email = driver.user?.email ?? driver.email ?? '-';
+    const phone = driver.no_hp ?? '-';
+    item.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div style="min-width:0;">
+          <div style="font-weight:700;color:#111;margin-bottom:4px">${name}</div>
+          <div style="font-size:12px;color:#6b7280;">${email}</div>
+          <div style="font-size:12px;color:#6b7280;">${phone}</div>
+        </div>
+        <span style="font-size:12px;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#0f3d22;">Pilih</span>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+  function showAssignDriverSearchPanel() {
+    document.getElementById('assign-driver-search-toggle').style.display = 'none';
+    document.getElementById('assign-driver-search-panel').style.display = 'block';
+    document.getElementById('assign-driver-search-results-panel').style.display = 'block';
+    document.getElementById('assign-driver-search-input').focus();
+  }
+
+function filterAssignDriverSearch() {
+  const query = document.getElementById('assign-driver-search-input').value.trim().toLowerCase();
+  const filtered = (window.assignDriverCandidates ?? []).filter(d => {
+    const name = (d.user?.name ?? d.name ?? '').toLowerCase();
+    const email = (d.user?.email ?? d.email ?? '').toLowerCase();
+    const noHp = (d.no_hp ?? '').toLowerCase();
+    const nik = (d.nik ?? d.user?.nik ?? '').toLowerCase();
+    return name.includes(query) || email.includes(query) || noHp.includes(query) || nik.includes(query);
+  });
+  renderAssignDriverSearchResults(filtered);
+}
+
+function formatWhatsAppNumber(phone) {
+  if (!phone) return '';
+  let cleaned = phone.replace(/[^0-9]/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '62' + cleaned.substring(1);
+  }
+  return cleaned;
+}
+
+function copyAssignDriverNumber(phone) {
+  if (!phone) {
+    toast('Nomor telepon tidak tersedia', 'error');
+    return;
+  }
+  navigator.clipboard.writeText(phone).then(() => {
+    toast('Nomor telepon berhasil disalin');
+  }).catch(() => {
+    toast('Gagal menyalin nomor telepon', 'error');
+  });
+}
+
+function renderReplaceDriverSearchResults(drivers) {
+  const container = document.getElementById('replace-driver-search-results');
+  const selectedLabel = document.getElementById('replace-driver-selected-label');
+  const hiddenDriverId = document.getElementById('replace-driver-id');
+  container.innerHTML = '';
+  if (!drivers.length) {
+    container.innerHTML = '<div style="padding:12px;color:#6b7280">Tidak ada driver tersedia untuk ditugaskan</div>';
+    hiddenDriverId.value = '';
+    selectedLabel.textContent = 'Belum ada driver dipilih';
+    selectedLabel.style.color = '#6b7280';
+    return;
+  }
+
+  drivers.forEach(driver => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.style.width = '100%';
+    item.style.textAlign = 'left';
+    item.style.border = 'none';
+    item.style.background = 'transparent';
+    item.style.padding = '14px';
+    item.style.cursor = 'pointer';
+    item.style.display = 'block';
+    item.style.borderBottom = '1px solid #f0f0f0';
+    item.onmouseover = () => item.style.background = '#f8fafc';
+    item.onmouseout = () => item.style.background = 'transparent';
+    item.onclick = () => {
+      hiddenDriverId.value = driver.id;
+      selectedLabel.textContent = `Driver dipilih: ${driver.user?.name ?? driver.name ?? 'N/A'}${driver.no_hp ? ' — ' + driver.no_hp : ''}`;
+      selectedLabel.style.color = '#111827';
+      Array.from(container.children).forEach(child => child.style.background = 'transparent');
+      item.style.background = '#eef2ff';
+    };
+
+    const name = driver.user?.name ?? driver.name ?? '-';
+    const email = driver.user?.email ?? driver.email ?? '-';
+    const phone = driver.no_hp ?? '-';
+    item.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div style="min-width:0;">
+          <div style="font-weight:700;color:#111;margin-bottom:4px">${name}</div>
+          <div style="font-size:12px;color:#6b7280;">${email}</div>
+          <div style="font-size:12px;color:#6b7280;">${phone}</div>
+        </div>
+        <span style="font-size:12px;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#0f3d22;">Pilih</span>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function filterReplaceDriverSearch() {
+  const query = document.getElementById('replace-driver-search-input').value.trim().toLowerCase();
+  const filtered = (window.assignDriverCandidates ?? []).filter(d => {
+    const name = (d.user?.name ?? d.name ?? '').toLowerCase();
+    const email = (d.user?.email ?? d.email ?? '').toLowerCase();
+    const noHp = (d.no_hp ?? '').toLowerCase();
+    const nik = (d.nik ?? d.user?.nik ?? '').toLowerCase();
+    return name.includes(query) || email.includes(query) || noHp.includes(query) || nik.includes(query);
+  });
+  renderReplaceDriverSearchResults(filtered);
+}
+
+function openReplaceDriverModal() {
+  // assumes assignDriverCandidates already set by openAssign
+  document.getElementById('replace-driver-search-input').value = '';
+  document.getElementById('replace-driver-search-results').innerHTML = '';
+  renderReplaceDriverSearchResults(window.assignDriverCandidates ?? []);
+  document.getElementById('replace-driver-selected-label').textContent = 'Belum ada driver dipilih';
+  document.getElementById('replace-driver-id').value = '';
+  document.getElementById('replace-start').value = new Date().toISOString().split('T')[0];
+  document.getElementById('replace-finish-checkbox').checked = false;
+  document.getElementById('replace-finish-group').style.display = 'none';
+  openModal('replace-driver-modal');
+}
+
+function toggleReplaceFinishDate() {
+  const finishGroup = document.getElementById('replace-finish-group');
+  const checked = document.getElementById('replace-finish-checkbox').checked;
+  finishGroup.style.display = checked ? 'block' : 'none';
+}
+
+async function saveReplaceAssign() {
+  const driverId = document.getElementById('replace-driver-id').value;
+  const startDate = document.getElementById('replace-start').value;
+  const finishCheck = document.getElementById('replace-finish-checkbox').checked;
+  const finishDate = document.getElementById('replace-finish').value;
+
+  if (!driverId) { toast('Pilih driver terlebih dahulu', 'warn'); return; }
+  if (!startDate) { toast('Tanggal mulai wajib diisi', 'warn'); return; }
+  if (finishCheck && !finishDate) { toast('Silakan pilih tanggal selesai', 'warn'); return; }
+
+  const payload = { driver_id: driverId, tanggal_mulai: startDate };
+  payload.tanggal_selesai = finishCheck ? finishDate : null;
+
+  const res = await api.post('/buses/' + assignBusId + '/drivers', payload);
+    if (res.ok) {
+      console.debug('[saveReplaceAssign] success response:', res);
+      toast('Driver berhasil diganti');
+      closeModal('replace-driver-modal');
+
+      // Ensure driver is not active on other buses (1 driver ↔ 1 bus)
+      try {
+        const newDriverId = document.getElementById('replace-driver-id').value || res.data?.data?.id || res.data?.data?.driver_id || null;
+        if (newDriverId) {
+          const today = new Date().toISOString().split('T')[0];
+          const allBusesRes = await api.get('/buses', { per_page: 1000, _t: Date.now() });
+          const allBuses = allBusesRes.data?.data ?? allBusesRes.data ?? [];
+          const promises = [];
+          allBuses.forEach(b => {
+            if (b.id === assignBusId) return;
+            (b.drivers ?? []).forEach(d => {
+              const did = d.id ?? d.user?.id ?? d.driver_id ?? null;
+              const pivotId = d.pivot?.id ?? d.pivot_id ?? null;
+              const end = d.pivot?.tanggal_selesai;
+              const active = !end || end >= today;
+              if (pivotId && active && (did == newDriverId || d.id == newDriverId)) {
+                // set tanggal_selesai ke hari ini untuk menonaktifkan
+                promises.push(api.put('/bus-driver/' + pivotId, { tanggal_selesai: today }));
+              }
+            });
+          });
+          await Promise.all(promises);
+        }
+      } catch (err) { console.debug('[saveReplaceAssign] cleanup error', err); }
+
+      // re-open assign modal and refresh list
+      await openAssign(assignBusId);
+      loadBus(currentPage);
+  } else {
+    console.debug('[saveReplaceAssign] error response:', res);
+    toast(res.data?.message ?? 'Gagal mengganti driver', 'error');
+  }
 }
 
 async function saveAssign() {
-  const driverId = document.getElementById('assign-driver-select').value;
+  const driverId = document.getElementById('assign-driver-id').value;
   const startDate = document.getElementById('assign-start').value;
+  const finishCheck = document.getElementById('assign-finish-checkbox').checked;
+  const finishDate = document.getElementById('assign-finish').value;
+
+  if (!startDate) { toast('Tanggal mulai wajib diisi', 'warn'); return; }
+  if (finishCheck && !finishDate) { toast('Silakan pilih tanggal selesai', 'warn'); return; }
+
+  const payload = {
+    tanggal_mulai: startDate,
+    tanggal_selesai: finishCheck ? finishDate : null,
+  };
+
+  let res;
+  if (currentBusDriverAssignmentId) {
+    res = await api.put('/bus-driver/' + currentBusDriverAssignmentId, payload);
+    if (res.ok) {
+      toast('Data driver berhasil disimpan');
+      closeModal('assign-modal');
+      loadBus(currentPage);
+      return;
+    }
+    toast(res.data?.message ?? 'Gagal memperbarui data driver', 'error');
+    return;
+  }
+
   if (!driverId) { toast('Pilih driver terlebih dahulu', 'warn'); return; }
-  const res = await api.post('/buses/' + assignBusId + '/drivers', { driver_id: driverId, tanggal_mulai: startDate });
-  res.ok ? (toast('Driver berhasil di-assign'), closeModal('assign-modal'), loadBus(currentPage)) : toast(res.data?.message ?? 'Gagal', 'error');
+  payload.driver_id = driverId;
+  res = await api.post('/buses/' + assignBusId + '/drivers', payload);
+  if (res.ok) {
+    console.debug('[saveAssign] success response:', res);
+    toast('Driver berhasil di-assign');
+    closeModal('assign-modal');
+
+    // Ensure driver is not active on other buses (1 driver ↔ 1 bus)
+    try {
+      const newDriverId = payload.driver_id || res.data?.data?.id || res.data?.data?.driver_id || null;
+      if (newDriverId) {
+        const today = new Date().toISOString().split('T')[0];
+        const allBusesRes = await api.get('/buses', { per_page: 1000, _t: Date.now() });
+        const allBuses = allBusesRes.data?.data ?? allBusesRes.data ?? [];
+        const promises = [];
+        allBuses.forEach(b => {
+          if (b.id === assignBusId) return;
+          (b.drivers ?? []).forEach(d => {
+            const did = d.id ?? d.user?.id ?? d.driver_id ?? null;
+            const pivotId = d.pivot?.id ?? d.pivot_id ?? null;
+            const end = d.pivot?.tanggal_selesai;
+            const active = !end || end >= today;
+            if (pivotId && active && (did == newDriverId || d.id == newDriverId)) {
+              promises.push(api.put('/bus-driver/' + pivotId, { tanggal_selesai: today }));
+            }
+          });
+        });
+        await Promise.all(promises);
+      }
+    } catch (err) { console.debug('[saveAssign] cleanup error', err); }
+
+    // reload modal & list with fresh data
+    await openAssign(assignBusId);
+    loadBus(currentPage);
+  } else {
+    console.debug('[saveAssign] error response:', res);
+    toast(res.data?.message ?? 'Gagal', 'error');
+  }
+}
+
+function toggleAssignFinishDate() {
+  const finishGroup = document.getElementById('assign-finish-group');
+  const checked = document.getElementById('assign-finish-checkbox').checked;
+  finishGroup.style.display = checked ? 'block' : 'none';
 }
 
 async function deleteBus(id) {
@@ -663,103 +1326,14 @@ let currentRouteData = null;
 
 async function openRouteHalte(busId, busName) {
   currentBusId = busId;
-  
-  // Get route for this bus
+  editingBusName = busName;
+
   const res = await api.get(`/buses/${busId}/route`);
-  const route = res.data?.data;
-  
-  if (!route) {
-    document.getElementById('route-title-text').textContent = 'Rute & Halte - ' + busName;
-    document.getElementById('route-polyline-count').textContent = 'Belum ada rute untuk bus ini';
-    document.getElementById('halte-list-content').innerHTML = '<p style="color:var(--c-text-grey);text-align:center;padding:20px">Belum ada halte</p>';
-    document.getElementById('halte-count-badge').textContent = '0 halte';
-    document.getElementById('route-map').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--c-text-grey)">Belum ada data rute</div>';
-    openModal('route-halte-modal');
-    return;
-  }
-  
-  currentRouteData = route;
-  
-  // Set title
-  document.getElementById('route-title-text').textContent = route.nama_rute || 'Rute & Halte - ' + busName;
-  document.getElementById('route-polyline-count').textContent = (route.polyline?.length || 0) + ' titik polyline';
-  
-  // Set halte count
-  const halteCount = route.haltes?.length || 0;
-  document.getElementById('halte-count-badge').textContent = halteCount + ' halte';
-  
-  // Render halte list
-  let halteHtml = '';
-  if (halteCount > 0) {
-    for (let i = 0; i < route.haltes.length; i++) {
-      const halte = route.haltes[i];
-      const halteData = halte.halte;
-      const colors = ['#4CAF50', '#F44336', '#2196F3', '#FF9800', '#9C27B0', '#00BCD4'];
-      const color = colors[i % colors.length];
-      
-      halteHtml += `
-        <div style="display:flex;gap:12px;padding:12px;border:1px solid var(--c-border);border-radius:6px">
-          <div style="display:flex;align-items:center;justify-content:center;min-width:36px;width:36px;height:36px;background:${color};color:white;border-radius:50%;font-weight:600">${i + 1}</div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:14px">${halteData?.nama_halte || 'N/A'}</div>
-            <div style="font-size:12px;color:var(--c-text-grey)">${halteData?.alamat || 'Alamat tidak tersedia'}</div>
-          </div>
-        </div>
-      `;
-    }
-  } else {
-    halteHtml = '<p style="color:var(--c-text-grey);text-align:center;padding:20px">Belum ada halte dalam rute ini</p>';
-  }
-  document.getElementById('halte-list-content').innerHTML = halteHtml;
-  
-  // Render map
-  setTimeout(() => {
-    if (routeMapInstance) {
-      routeMapInstance.remove();
-    }
-    
-    const mapContainer = document.getElementById('route-map');
-    routeMapInstance = L.map(mapContainer).setView([-7.6288, 111.5305], 13);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19
-    }).addTo(routeMapInstance);
-    
-    // Plot polyline
-    if (route.polyline && route.polyline.length > 0) {
-      const polylineCoords = route.polyline.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]);
-      L.polyline(polylineCoords, { color: '#2196F3', weight: 3, opacity: 0.8 }).addTo(routeMapInstance);
-      routeMapInstance.fitBounds(L.latLngBounds(polylineCoords));
-    }
-    
-    // Plot halte markers
-    if (route.haltes && route.haltes.length > 0) {
-      const colors = ['#4CAF50', '#F44336', '#2196F3', '#FF9800', '#9C27B0', '#00BCD4'];
-      route.haltes.forEach((rh, idx) => {
-        const halteData = rh.halte;
-        if (halteData?.latitude && halteData?.longitude) {
-          const color = colors[idx % colors.length];
-          const marker = L.circleMarker(
-            [parseFloat(halteData.latitude), parseFloat(halteData.longitude)],
-            { radius: 24, fillColor: color, color: color, weight: 2, opacity: 1, fillOpacity: 0.8 }
-          ).addTo(routeMapInstance);
-          
-          marker.bindPopup(`<div style="font-weight:600">${halteData.nama_halte}</div><div style="font-size:12px">${halteData.alamat}</div>`);
-          
-          L.marker([parseFloat(halteData.latitude), parseFloat(halteData.longitude)], {
-            icon: L.divIcon({
-              html: `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:${color};color:white;border-radius:50%;font-weight:600;font-size:14px">${idx + 1}</div>`,
-              iconSize: [30, 30],
-              className: 'custom-marker'
-            })
-          }).addTo(routeMapInstance);
-        }
-      });
-    }
-  }, 100);
-  
-  openModal('route-halte-modal');
+  currentRouteData = res.data?.data ?? null;
+
+  // Open edit route view directly
+  allHaltesCache = [];
+  openEditRouteModal();
 }
 
 // ──── Edit Route Modal ────
@@ -786,8 +1360,7 @@ function openEditRouteModal() {
       }));
   }
 
-  document.getElementById('edit-route-title').textContent = 'Ubah Rute - ' + editingBusName;
-  document.getElementById('edit-route-subtitle').textContent = currentRouteData ? (currentRouteData.nama_rute || 'Edit rute') : 'Rute baru';
+  document.getElementById('edit-route-title').textContent = 'Ubah Rute [' + editingBusName + ']';
 
   openModal('edit-route-modal');
   switchEditTab('urutan');
@@ -1073,16 +1646,24 @@ function updateSaveBtn() {
 async function saveEditRoute() {
   if (editRouteSelectedHaltes.length < 2) { toast('Pilih minimal 2 halte', 'warn'); return; }
   const halteIds = editRouteSelectedHaltes.map((h, i) => ({ halte_id: h.id, urutan: i + 1 }));
+  const polylinePoints = editRouteSelectedHaltes
+    .filter(h => h.latitude !== undefined && h.latitude !== null && h.longitude !== undefined && h.longitude !== null)
+    .map(h => ({ latitude: parseFloat(h.latitude), longitude: parseFloat(h.longitude) }));
+
   let res;
   if (currentRouteData) {
-    res = await api.put('/routes/' + currentRouteData.id, { haltes: halteIds });
+    res = await api.post('/routes/' + currentRouteData.id + '/sync', { polyline: polylinePoints, haltes: halteIds });
   } else {
     res = await api.post('/routes', { bus_id: currentBusId, haltes: halteIds });
   }
+
   if (res.ok) {
     toast('Rute berhasil disimpan');
+    currentRouteData = res.data?.data ?? currentRouteData;
     closeEditRouteModal();
-    openRouteHalte(currentBusId, editingBusName); // refresh route-halte modal
+    if (typeof loadBus === 'function') {
+      loadBus(currentPage);
+    }
   } else {
     toast(res.data?.message ?? 'Gagal menyimpan rute', 'error');
   }
@@ -1110,52 +1691,254 @@ async function deleteRoute() {
 // ──── Siswa ────
 async function openSiswa(busId, busName) {
   currentBusId = busId;
-  document.getElementById('siswa-bus-name').textContent = busName;
-  
-  // Get students for this bus (API returns paginated data)
-  const res = await api.get(`/buses/${busId}/students`);
-  // Handle both direct array and paginated response structure
-  const students = res.data?.data?.data ?? res.data?.data ?? [];
-  
+  currentBusName = busName;
+  document.getElementById('siswa-bus-name').textContent = busName || 'Bus';
+  document.getElementById('siswa-search-input').value = '';
+  document.getElementById('siswa-content').innerHTML = `
+    <div class="empty-state">
+      <p style="color:var(--c-text-grey)">Memuat siswa...</p>
+    </div>
+  `;
+  openModal('siswa-modal');
+
+  try {
+    const res = await api.get(`/buses/${busId}/students`);
+    const students = res.data?.data?.data ?? res.data?.data ?? [];
+    currentBusStudents = students || [];
+    renderSiswaList(currentBusStudents);
+  } catch (err) {
+    console.error('openSiswa error', err);
+    currentBusStudents = [];
+    document.getElementById('siswa-content').innerHTML = `
+      <div class="empty-state">
+        <p style="color:var(--c-text-grey)">Gagal memuat siswa. Coba lagi.</p>
+      </div>
+    `;
+    toast('Gagal memuat data siswa', 'error');
+  }
+}
+
+function filterSiswaList() {
+  const query = document.getElementById('siswa-search-input').value.trim().toLowerCase();
+  const filtered = currentBusStudents.filter(siswa => {
+    const name = (siswa.user?.name || siswa.name || '').toLowerCase();
+    const email = (siswa.user?.email || siswa.email || '').toLowerCase();
+    return name.includes(query) || email.includes(query);
+  });
+  renderSiswaList(filtered);
+}
+
+function renderSiswaList(students) {
   if (!students || students.length === 0) {
     document.getElementById('siswa-content').innerHTML = `
       <div class="empty-state">
         <p style="color:var(--c-text-grey)">Belum ada siswa untuk bus ini</p>
       </div>
     `;
-  } else {
-    let html = `<div style="display:flex;flex-direction:column;gap:8px">`;
-    for (const siswa of students) {
-      const namaSiswa = siswa.user?.name || siswa.name || 'N/A';
-      const emailSiswa = siswa.user?.email || siswa.email || 'N/A';
-      const siswaId = siswa.id || siswa.student_id;
-      
-      html += `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--c-border);border-radius:6px;background:white">
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:14px">${namaSiswa}</div>
-            <div style="font-size:12px;color:var(--c-text-grey)">${emailSiswa}</div>
-            ${siswa.halte_tujuan ? `<div style="font-size:11px;color:#1976d2;background:#e3f2fd;padding:2px 6px;border-radius:3px;display:inline-block;margin-top:4px">📍 ${siswa.halte_tujuan}</div>` : ''}
-          </div>
-          <button class="btn btn-xs btn-icon" onclick="removeSiswaFromBus(${siswaId})" style="background:#ffebee;border:none"><span class="material-icons" style="font-size:14px;color:#d32f2f">delete</span></button>
-        </div>
-      `;
-    }
-    html += `</div>`;
-    document.getElementById('siswa-content').innerHTML = html;
+    return;
   }
-  
-  openModal('siswa-modal');
+
+  let html = `<div style="display:flex;flex-direction:column;gap:10px">`;
+  for (const siswa of students) {
+    const namaSiswa = siswa.user?.name || siswa.name || 'N/A';
+    const emailSiswa = siswa.user?.email || siswa.email || 'N/A';
+    const siswaId = siswa.id || siswa.student_id;
+    const halteLabel = siswa.halte_tujuan ? `Halte: ${siswa.halte_tujuan}` : '';
+
+    html += `
+      <div class="siswa-list-item" onclick="openStudentDetail(${siswaId})">
+        <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
+          <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f0f0f0;flex-shrink:0;">
+            <img src="${siswa.user?.photo_url ? proxyImgUrl(siswa.user.photo_url) : '/images/siswa/default.svg'}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='/images/siswa/default.svg'">
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:14px;line-height:1.2">${namaSiswa}</div>
+            <div style="font-size:12px;color:var(--c-text-grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${emailSiswa}</div>
+            ${halteLabel ? `<div style="font-size:11px;color:#1976d2;margin-top:4px">${halteLabel}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  html += `</div>`;
+  document.getElementById('siswa-content').innerHTML = html;
+}
+
+async function openStudentDetail(studentId) {
+  try {
+    const res = await api.get('/students/' + studentId);
+    if (!res.ok) {
+      toast(res.data?.message ?? 'Gagal memuat detail siswa', 'error');
+      return;
+    }
+
+    currentStudentDetailId = studentId;
+    const siswa = res.data?.data ?? {};
+    const user = siswa.user ?? {};
+    const busName = siswa.bus?.kode_bus ?? siswa.bus?.kode ?? siswa.bus?.nama_bus ?? '-';
+    const halteName = siswa.halte?.nama_halte ?? siswa.halte_tujuan ?? siswa.halte?.nama ?? '-';
+    const alamat = siswa.alamat || user.alamat || '-';
+    const status = siswa.status || siswa.approval_status || '-';
+
+    const photoUrl = user.photo_url ? proxyImgUrl(user.photo_url) : '/images/siswa/default.svg';
+    const photoEl = document.getElementById('student-detail-photo');
+    photoEl.src = photoUrl;
+    photoEl.onerror = function() { this.src = '/images/siswa/default.svg'; };
+
+    document.getElementById('student-detail-name').textContent = user.name || siswa.name || 'N/A';
+    document.getElementById('student-detail-email').textContent = user.email || siswa.email || '-';
+    document.getElementById('student-detail-nis').textContent = siswa.nis || siswa.student?.nis || '-';
+    document.getElementById('student-detail-kelas').textContent = siswa.kelas || siswa.student?.kelas || '-';
+    document.getElementById('student-detail-sekolah').textContent = siswa.sekolah || siswa.student?.sekolah || '-';
+    document.getElementById('student-detail-status').textContent = status;
+    document.getElementById('student-detail-bus').textContent = busName;
+    document.getElementById('student-detail-halte').textContent = halteName;
+    document.getElementById('student-detail-alamat').textContent = alamat;
+
+    openModal('student-detail-modal');
+  } catch (e) {
+    console.error(e);
+    toast('Gagal memuat detail siswa', 'error');
+  }
 }
 
 async function openAddSiswaForm() {
-  toast('Fitur tambah siswa sedang dikembangkan', 'info');
+  if (!currentBusId) {
+    toast('Tidak ada bus yang dipilih', 'error');
+    return;
+  }
+
+  const searchResults = document.getElementById('add-siswa-search-results');
+  const selectedLabel = document.getElementById('add-siswa-selected-label');
+  const halteSelect = document.getElementById('select-halte-to-add');
+  document.getElementById('add-siswa-bus-name').textContent = document.getElementById('siswa-bus-name').textContent;
+
+  searchResults.innerHTML = '<div style="padding:12px;color:#6b7280">Memuat siswa...</div>';
+  selectedLabel.textContent = 'Belum ada siswa dipilih';
+  selectedLabel.style.color = '#6b7280';
+  halteSelect.innerHTML = '<option value="">-- Memuat halte... --</option>';
+
+  try {
+    const [studentsRes, busRes] = await Promise.all([
+      api.get('/students', { per_page: 1000, approval_status: 'approved' }),
+      api.get('/buses/' + currentBusId)
+    ]);
+
+    if (!studentsRes.ok) {
+      throw new Error('Gagal memuat daftar siswa');
+    }
+    if (!busRes.ok) {
+      throw new Error('Gagal memuat detail bus');
+    }
+
+    const students = studentsRes.data?.data?.data ?? studentsRes.data?.data ?? [];
+    const bus = busRes.data?.data;
+    const haltes = getBusHaltes(bus);
+
+    if (haltes.length === 0) {
+      toast('Bus belum memiliki halte. Tambahkan halte pada rute bus terlebih dahulu.', 'error');
+      return;
+    }
+
+    const availableStudents = students.filter(s => Number(s.bus_id || 0) !== Number(currentBusId));
+    addSiswaAvailableStudents = availableStudents;
+    addSiswaSelectedId = null;
+    document.getElementById('add-siswa-search-input').value = '';
+    renderAddSiswaSelect(addSiswaAvailableStudents);
+
+    halteSelect.innerHTML = '<option value="">-- Pilih halte --</option>';
+    for (const halte of haltes) {
+      const option = document.createElement('option');
+      option.value = halte.id;
+      option.textContent = halte.nama_halte || `${halte.id}`;
+      halteSelect.appendChild(option);
+    }
+
+    openModal('add-siswa-modal');
+  } catch (e) {
+    console.error(e);
+    toast(e.message || 'Gagal memuat form tambah siswa', 'error');
+  }
+}
+
+function getBusHaltes(bus) {
+  const haltes = [];
+  if (!bus?.routes?.length) {
+    return haltes;
+  }
+
+  for (const route of bus.routes) {
+    for (const halte of route.haltes ?? []) {
+      if (!haltes.some(h => h.id === halte.id)) {
+        haltes.push(halte);
+      }
+    }
+  }
+
+  return haltes;
+}
+
+async function addSiswaToBus() {
+  const siswaId = addSiswaSelectedId;
+  const halteId = document.getElementById('select-halte-to-add').value;
+
+  if (!siswaId) {
+    toast('Silakan pilih siswa terlebih dahulu melalui search', 'error');
+    return;
+  }
+  if (!halteId) {
+    toast('Silakan pilih halte terlebih dahulu', 'error');
+    return;
+  }
+
+  try {
+    const res = await api.post(`/buses/${currentBusId}/students`, {
+      student_id: siswaId,
+      halte_id: halteId,
+    });
+
+    if (res.ok) {
+      toast('Siswa berhasil ditambahkan ke bus');
+      closeModal('add-siswa-modal');
+      openSiswa(currentBusId, document.getElementById('siswa-bus-name').textContent);
+    } else {
+      toast(res.data?.message ?? 'Gagal menambahkan siswa', 'error');
+    }
+  } catch (e) {
+    console.error(e);
+    toast('Gagal menambahkan siswa', 'error');
+  }
+}
+
+async function removeStudentFromCurrentBus() {
+  if (!currentStudentDetailId) {
+    toast('Tidak ada siswa terpilih', 'error');
+    return;
+  }
+  confirmDialog('Hapus siswa dari bus ini?', async () => {
+    const r = await api.delete(`/buses/${currentBusId}/students/${currentStudentDetailId}`);
+    if (r.ok) {
+      toast('Siswa dihapus dari bus');
+      currentBusStudents = currentBusStudents.filter(s => (s.id || s.student_id) !== currentStudentDetailId);
+      renderSiswaList(currentBusStudents);
+      closeModal('student-detail-modal');
+      openSiswa(currentBusId, currentBusName);
+    } else {
+      toast(r.data?.message ?? 'Gagal', 'error');
+    }
+  });
 }
 
 async function removeSiswaFromBus(siswaId) {
   confirmDialog('Hapus siswa dari bus ini?', async () => {
     const r = await api.delete(`/buses/${currentBusId}/students/${siswaId}`);
-    r.ok ? (toast('Siswa dihapus dari bus'), openSiswa(currentBusId, 'Bus')) : toast(r.data?.message ?? 'Gagal', 'error');
+    if (r.ok) {
+      toast('Siswa dihapus dari bus');
+      renderSiswaList(currentBusStudents.filter(s => (s.id || s.student_id) !== siswaId));
+      openSiswa(currentBusId, currentBusName);
+    } else {
+      toast(r.data?.message ?? 'Gagal', 'error');
+    }
   });
 }
 

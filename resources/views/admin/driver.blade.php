@@ -219,12 +219,13 @@
   <button class="filter-btn active" data-filter="all" onclick="setDriverFilter('all', this)">Semua</button>
   <button class="filter-btn" data-filter="online" onclick="setDriverFilter('online', this)">🟢 Online</button>
   <button class="filter-btn" data-filter="offline" onclick="setDriverFilter('offline', this)">🔴 Offline</button>
+  <button class="filter-btn" data-filter="no-bus" onclick="setDriverFilter('no-bus', this)">No-Bus</button>
 </div>
 
 <div class="card" style="padding:0">
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Foto</th><th>Nama</th><th>Email</th><th>No HP</th><th>Status GPS</th><th>Status Akun</th><th>Aksi</th></tr></thead>
+      <thead><tr><th>Foto</th><th>Nama</th><th>Email</th><th>No HP</th><th>Status GPS</th><th>Status Akun</th><th>Status Bus</th><th>Aksi</th></tr></thead>
       <tbody id="driver-tbody">
         <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--c-text-grey)">
           <div class="loading-spinner" style="margin:0 auto 8px"></div>Memuat data...
@@ -389,17 +390,24 @@ async function loadDriver(page = 1) {
   let rows = res.data?.data ?? [];
   const tbody = document.getElementById('driver-tbody');
   
-  // Apply online/offline filter based on active bus GPS status
+  // Apply online/offline/no-bus filters
   if (currentFilter !== 'all') {
     rows = rows.filter(d => {
       const buses = d.buses ?? [];
       const isOnline = buses.some(b => b.pivot?.gps_status === 'on');
-      return currentFilter === 'online' ? isOnline : !isOnline;
+      const hasActiveBus = buses.some(b => {
+        const end = b.pivot?.tanggal_selesai;
+        return !end || end >= new Date().toISOString().split('T')[0];
+      });
+      if (currentFilter === 'online') return isOnline;
+      if (currentFilter === 'offline') return !isOnline;
+      if (currentFilter === 'no-bus') return !hasActiveBus;
+      return true;
     });
   }
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="material-icons">badge</span><p>Tidak ada driver ditemukan</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">badge</span><p>Tidak ada driver ditemukan</p></div></td></tr>`;
     document.getElementById('driver-pagination').innerHTML = '';
     return;
   }
@@ -414,6 +422,11 @@ async function loadDriver(page = 1) {
     const isOnline = buses.some(b => b.pivot?.gps_status === 'on');
     const isSuspended = d.user?.is_suspended ?? false;
     const name = d.user?.name ?? d.name ?? '-';
+    const activeBuses = buses.filter(b => {
+      const end = b.pivot?.tanggal_selesai;
+      return !end || end >= new Date().toISOString().split('T')[0];
+    });
+    const hasBus = activeBuses.length > 0;
     
     return `
       <tr>
@@ -434,6 +447,11 @@ async function loadDriver(page = 1) {
           </span>
         </td>
         <td>${statusBadge(isSuspended ? 'suspended' : 'active')}</td>
+        <td>
+          <span style="font-size:12px;padding:4px 10px;border-radius:999px;display:inline-block;${hasBus ? 'background:#e7f5e6;color:#1b5e20' : 'background:#fff4e5;color:#b15f00'}">
+            ${hasBus ? 'Bus Aktif' : 'No-Bus'}
+          </span>
+        </td>
         <td>
           <div style="display:flex;gap:6px">
             <button class="btn-purple-icon" onclick="openChatModal('${name.replace(/'/g, "\\'")}', '${d.no_hp ?? ''}')" title="Hubungi Driver">

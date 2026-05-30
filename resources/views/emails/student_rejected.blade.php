@@ -51,7 +51,7 @@
           <!-- Footer -->
           <tr>
             <td style="background:#F8F8F8;padding:20px 40px;text-align:center;border-top:1px solid #EEE;">
-              <p style="margin:0;font-size:12px;color:#aaa;">© {{ date('Y') }} {{ $appName }} · Sistem Pelacak Bus Sekolah</p>
+              <p style="margin:0;font-size:12px;color:#aaa;">© {{ date('Y') }} {{ $appName }} · Bus Sekolah Kota Madiun</p>
             </td>
           </tr>
 

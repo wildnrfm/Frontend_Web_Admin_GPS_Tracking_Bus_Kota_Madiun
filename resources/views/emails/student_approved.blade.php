@@ -26,7 +26,7 @@
               </table>
 
               <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Akun Kamu Disetujui!</h1>
-              <p style="margin:8px 0 0;color:rgba(255,255,255,0.75);font-size:14px;">Mobitra · Sistem Pelacak Bus Sekolah</p>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.75);font-size:14px;">Mobitra · Bus Sekolah Kota Madiun</p>
             </td>
           </tr>
 
@@ -77,7 +77,7 @@
           <!-- Footer -->
           <tr>
             <td style="background:#F8F8F8;padding:20px 40px;text-align:center;border-top:1px solid #EEE;">
-              <p style="margin:0;font-size:12px;color:#aaa;">© {{ date('Y') }} Mobitra · Sistem Pelacak Bus Sekolah</p>
+              <p style="margin:0;font-size:12px;color:#aaa;">© {{ date('Y') }} Mobitra · Bus Sekolah Kota Madiun</p>
             </td>
           </tr>
 

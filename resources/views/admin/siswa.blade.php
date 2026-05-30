@@ -140,6 +140,22 @@
   color: var(--c-text-grey);
   line-height: 1.3;
 }
+.siswa-table-cell-ellipsis {
+  max-width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.siswa-action-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.siswa-action-row button {
+  white-space: nowrap;
+}
 .preview-container {
   position: relative;
   border-radius: 12px;
@@ -208,11 +224,11 @@
     <table>
       <thead>
         <tr>
-          <th>Foto</th><th>Nama</th><th>Email</th><th>NIS</th><th>Kelas</th><th>Sekolah</th><th>Status</th><th>Aksi</th>
+          <th>Foto</th><th>Nama</th><th>Email</th><th>NIS</th><th>Kelas</th><th>Sekolah</th><th>Alamat</th><th>Status</th><th>Aksi</th>
         </tr>
       </thead>
       <tbody id="siswa-tbody">
-        <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--c-text-grey)">
+        <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--c-text-grey)">
           <div class="loading-spinner" style="margin:0 auto 8px"></div>Memuat data...
         </td></tr>
       </tbody>
@@ -575,20 +591,21 @@ function applyClientFilter(rows) {
 async function loadSiswa(page = 1) {
   currentPage = page;
   const q   = document.getElementById('search').value;
-  const res = await api.get('/students', { search: q, per_page: 1000 });
+  const res = await api.get('/students', { search: q, per_page: 1000, approval_status: 'approved' });
   
   let rows = res.data?.data ?? [];
+  rows = rows.filter(s => s.approval_status === 'approved');
   rows = applyClientFilter(rows);
   
   const tbody = document.getElementById('siswa-tbody');
   
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="material-icons">school</span><p>Tidak ada data siswa</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><span class="material-icons">school</span><p>Tidak ada data siswa</p></div></td></tr>`;
     document.getElementById('siswa-pagination').innerHTML = '';
     return;
   }
 
-  const perPage = 15;
+  const perPage = 20;
   const start = (page - 1) * perPage;
   const paginatedRows = rows.slice(start, start + perPage);
   
@@ -603,13 +620,14 @@ async function loadSiswa(page = 1) {
         </div>
       </td>
       <td><div style="font-weight:600">${s.user?.name ?? 'N/A'}</div></td>
-      <td style="color:var(--c-text-grey);font-size:12px">${s.user?.email ?? 'N/A'}</td>
+      <td class="siswa-table-cell-ellipsis" title="${s.user?.email ?? 'N/A'}" style="color:var(--c-text-grey);font-size:12px">${s.user?.email ?? 'N/A'}</td>
       <td>${s.nis ?? '-'}</td>
       <td>${s.kelas ?? '-'}</td>
-      <td style="font-size:12px">${s.sekolah ?? '-'}</td>
+      <td class="siswa-table-cell-ellipsis" title="${s.sekolah ?? '-'}" style="font-size:12px">${s.sekolah ?? '-'}</td>
+      <td class="siswa-table-cell-ellipsis" title="${s.alamat ?? '-'}" style="font-size:12px">${s.alamat ?? '-'}</td>
       <td>${statusBadge(s.approval_status, s.is_suspended)}</td>
       <td>
-        <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <div class="siswa-action-row">
           ${s.approval_status === 'pending' ? `
             <button class="btn btn-xs btn-primary" onclick="approve(${s.user_id})">Setujui</button>
             <button class="btn btn-xs" style="background:#FDECEA;color:var(--c-red)" onclick="reject(${s.user_id})">Tolak</button>

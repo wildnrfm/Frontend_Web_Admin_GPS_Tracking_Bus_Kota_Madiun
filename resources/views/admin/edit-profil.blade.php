@@ -3,7 +3,16 @@
 @section('page-title','Edit Profil')
 @section('content')
 
-@php $user = session('admin_user'); @endphp
+@php
+  $user = session('admin_user');
+  $photoUrl = '/images/admin/default.svg';
+  if (!empty($user['photo_url'])) {
+      $path = parse_url($user['photo_url'], PHP_URL_PATH);
+      $photoUrl = '/storage-proxy' . $path;
+  } elseif (!empty($user['photo'])) {
+      $photoUrl = '/storage-proxy/' . ltrim($user['photo'], '/');
+  }
+@endphp
 
 <style>
   .edit-container {
@@ -292,11 +301,9 @@
     <div class="section-title">Avatar</div>
     
     <div class="avatar-section">
-      @if($user['photo'] ?? null)
-        <img id="avatar-preview-img" src="{{ url('storage/' . $user['photo']) }}" alt="Avatar" class="avatar-preview has-image">
-      @else
-        <div id="avatar-preview-img" class="avatar-preview">{{ strtoupper(substr($user['name'] ?? 'A', 0, 1)) }}</div>
-      @endif
+      <img id="avatar-preview-img" src="{{ $photoUrl }}" alt="Avatar"
+           class="avatar-preview {{ !empty($user['photo_url']) || !empty($user['photo']) ? 'has-image' : '' }}"
+           onerror="this.src='/images/admin/default.svg'">
       
       <div class="avatar-input-wrapper">
         <input type="file" id="edit-avatar-input" accept="image/jpeg,image/png,image/jpg">
@@ -454,23 +461,12 @@ document.getElementById('edit-avatar-input').addEventListener('change', function
   
   selectedEditAvatarFile = file;
   
-  // Tampilkan preview
+  // Tampilkan preview langsung ke elemen img
   const reader = new FileReader();
   reader.onload = function(event) {
     const preview = document.getElementById('avatar-preview-img');
-    
-    // Buat img element jika sebelumnya div
-    if (preview.tagName === 'DIV') {
-      const img = document.createElement('img');
-      img.id = 'avatar-preview-img';
-      img.alt = 'Avatar';
-      img.className = 'avatar-preview has-image';
-      preview.parentNode.replaceChild(img, preview);
-    }
-    
-    const newPreview = document.getElementById('avatar-preview-img');
-    newPreview.src = event.target.result;
-    newPreview.classList.add('has-image');
+    preview.src = event.target.result;
+    preview.classList.add('has-image');
   };
   reader.readAsDataURL(file);
 });

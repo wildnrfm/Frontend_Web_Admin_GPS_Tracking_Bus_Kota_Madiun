@@ -319,6 +319,7 @@ function statusBadge(status, isSuspended = false) {
     aktif:    ['badge-green', 'Aktif'],
     maintenance: ['badge-orange', 'Perawatan'],
     non_aktif:   ['badge-grey', 'Non-aktif'],
+    nonaktif:   ['badge-grey', 'Non-aktif'],
   };
   const [cls, label] = map[status] ?? ['badge-grey', status ?? '-'];
   return `<span class="badge ${cls}">${label}</span>`;

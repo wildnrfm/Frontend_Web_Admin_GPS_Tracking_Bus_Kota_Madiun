@@ -33,8 +33,11 @@ class DashboardController extends Controller
                 $stats['total_buses'] = $busesData['pagination']['total'] ?? 0;
             }
 
-            // Fetch total students
-            $studentsData = ApiClient::get('/students', ['per_page' => 1])->json();
+            // Fetch total students excluding pending; suspended students tetap dihitung
+            $studentsData = ApiClient::get('/students', [
+                'per_page' => 1,
+                'approval_status' => 'approved',
+            ])->json();
             \Log::info('Students response:', $studentsData ?? []);
             if ($studentsData && isset($studentsData['pagination'])) {
                 $stats['total_students'] = $studentsData['pagination']['total'] ?? 0;

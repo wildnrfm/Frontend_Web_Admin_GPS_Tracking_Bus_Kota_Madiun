@@ -773,7 +773,7 @@ tbody tr:hover {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 1050;
+  z-index: 99999;
   background: rgba(0, 0, 0, .45);
   align-items: center;
   justify-content: center;
@@ -786,6 +786,8 @@ tbody tr:hover {
 }
 
 .modal {
+  position: relative;
+  z-index: 100000;
   background: var(--c-white);
   border-radius: var(--radius-lg);
   width: 100%;

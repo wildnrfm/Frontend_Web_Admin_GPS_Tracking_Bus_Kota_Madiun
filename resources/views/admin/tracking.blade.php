@@ -78,6 +78,75 @@
   #tracking-main-grid { grid-template-columns: 1fr 380px; gap: 24px; }
   .page-content { padding: 20px !important; padding-bottom: calc(var(--bottomnav-h) + 20px) !important; }
 }
+
+/* ── Custom Pin Map Bus Marker ── */
+.map-bus-marker {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  filter: drop-shadow(0 4px 10px rgba(15, 61, 34, 0.25));
+}
+.map-bus-marker-pulse {
+  position: absolute;
+  top: -2px; left: -2px;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--c-primary, #1B5E37);
+  animation: markerPulse 1.8s infinite ease-out;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes markerPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.map-bus-marker-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--c-primary, #1B5E37);
+  background: var(--c-primary-light, #E8F5ED);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.map-bus-marker-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.map-bus-marker-fallback {
+  font-size: 20px;
+  line-height: 1;
+}
+.map-bus-marker-label {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--c-primary-dark, #0F3D22);
+  color: #fff;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  white-space: nowrap;
+  border: 1.5px solid #fff;
+}
+.map-bus-marker-arrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--c-primary, #1B5E37);
+  z-index: 2;
+}
 </style>
 
 <div class="tracking-hero">
@@ -90,9 +159,6 @@
   </div>
   <div class="tracking-action-bar">
     <div style="font-size:13px;color:rgba(255,255,255,0.9)">Status koneksi GPS dan titik armada langsung tampil di peta</div>
-    <button class="btn btn-primary btn-sm btn-route" id="btn-route-editor" onclick="toggleRouteEditor()" title="Atur Rute">
-      <span class="material-icons" style="font-size:14px">route</span> Atur Rute
-    </button>
   </div>
 </div>
 
@@ -105,12 +171,7 @@
       <span id="sse-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#aaa;margin-right:4px"></span>
       <span id="sse-label">Menghubungkan...</span>
     </div>
-    {{-- Route editor toggle --}}
-    <div style="position:absolute;top:12px;left:12px;z-index:400;display:flex;flex-direction:column;gap:6px">
-      <button class="btn btn-primary btn-sm" onclick="toggleRouteEditor()" title="Atur Rute">
-        <span class="material-icons" style="font-size:14px">route</span> Atur Rute
-      </button>
-    </div>
+
   </div>
 
   {{-- Side Panel --}}
@@ -130,36 +191,7 @@
       </div>
     </div>
 
-    {{-- Route Editor Panel --}}
-    <div class="card" id="route-editor-panel" style="display:none">
-      <div style="font-size:14px;font-weight:700;margin-bottom:10px">
-        <span class="material-icons" style="font-size:16px;vertical-align:middle;color:var(--c-primary)">route</span>
-        Editor Rute
-      </div>
-      <div class="form-group">
-        <label class="form-label">Pilih Bus</label>
-        <select class="form-control" id="route-bus-select" onchange="loadRouteForBus()">
-          <option value="">-- Pilih bus --</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Nama Rute</label>
-        <input class="form-control" id="route-name" placeholder="Contoh: Rute A Pagi">
-      </div>
-      <div class="info-bar" style="font-size:11px;margin-bottom:10px">
-        <span class="material-icons" style="font-size:13px">info</span>
-        Klik peta untuk tambah titik rute. Drag marker untuk pindah.
-      </div>
-      <div style="font-size:12px;color:var(--c-text-grey);margin-bottom:6px">Titik rute: <b id="route-points-count">0</b></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="clearRoute()">
-          <span class="material-icons" style="font-size:13px">clear</span> Hapus Semua
-        </button>
-        <button class="btn btn-primary btn-sm" onclick="saveRoute()">
-          <span class="material-icons" style="font-size:13px">save</span> Simpan Rute
-        </button>
-      </div>
-    </div>
+
 
   </div>
 </div>
@@ -168,23 +200,39 @@
 @push('scripts')
 <script>
 // ── MAP INIT ─────────────────────────────────────────────────────
-let tMap, busMarkers = {}, routePolyline = null, routePoints = [], routeMarkers = [];
-let sseSource = null, routeEditorActive = false, selectedBusForRoute = null;
+let tMap, busMarkers = {};
+let sseSource = null;
 let sseReconnectDelay = 1000;
 let sseReconnectTimer = null;
 let fallbackPollTimer = null;
 let useFallback = false;
 let prevTrackStatus = {}; // untuk deteksi perubahan GPS status di tracking page
+let activeRoutePolyline = null;
+let activeStopMarkers = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   tMap = L.map('tracking-map', { attributionControl: false });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(tMap);
   tMap.setView([-7.6298, 111.5233], 13);
-  tMap.on('click', onMapClick);
 
-  loadBusesForEditor();
+  // Bersihkan rute terpilih saat klik area kosong di peta
+  tMap.on('click', (e) => {
+    if (e.target === tMap) {
+      clearActiveRoute();
+    }
+  });
+
   startSSE();
 });
+
+function clearActiveRoute() {
+  if (activeRoutePolyline) {
+    tMap.removeLayer(activeRoutePolyline);
+    activeRoutePolyline = null;
+  }
+  activeStopMarkers.forEach(m => tMap.removeLayer(m));
+  activeStopMarkers = [];
+}
 
 // ── GPS Toast (pakai fungsi global dari app.blade.php jika ada) ───
 function showTrackingToast(driverName, status, busCode) {
@@ -360,13 +408,36 @@ function updateBusMarkers(buses) {
     if (isOn && b.position) {
       const pos = b.position;
       const ll = [pos.latitude, pos.longitude];
+      const markerHtml = `
+        <div class="map-bus-marker">
+          <div class="map-bus-marker-pulse"></div>
+          <div class="map-bus-marker-avatar">
+            ${b.photo_url 
+              ? `<img src="${proxyImgUrl(b.photo_url)}" class="map-bus-marker-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">` 
+              : ''}
+            <span class="map-bus-marker-fallback" style="${b.photo_url ? 'display:none' : ''}">🚌</span>
+          </div>
+          <div class="map-bus-marker-label">${b.bus_code}</div>
+          <div class="map-bus-marker-arrow"></div>
+        </div>
+      `;
       const icon = L.divIcon({
-        html: `<div style="background:#4CAF50;color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 8px rgba(0,0,0,.3);border:2px solid #fff">🚌</div>`,
-        iconSize: [34, 34], iconAnchor: [17, 17], className: ''
+        html: markerHtml,
+        iconSize: [44, 48],
+        iconAnchor: [22, 48],
+        className: ''
       });
-      if (busMarkers[b.bus_id]) busMarkers[b.bus_id].setLatLng(ll);
-      else busMarkers[b.bus_id] = L.marker(ll, { icon }).addTo(tMap)
-        .bindPopup(`<b>${b.bus_code}</b><br>${b.bus_plate}<br>Driver: ${b.driver_name || '-'}<br>${(pos.speed||0).toFixed(0)} km/h`);
+      if (busMarkers[b.bus_id]) {
+        busMarkers[b.bus_id].setLatLng(ll);
+      } else {
+        busMarkers[b.bus_id] = L.marker(ll, { icon }).addTo(tMap)
+          .bindPopup(`<b>${b.bus_code}</b><br>${b.bus_plate}<br>Driver: ${b.driver_name || '-'}<br>${(pos.speed||0).toFixed(0)} km/h`);
+        
+        // Klik pada marker memicu muat rute & fokus
+        busMarkers[b.bus_id].on('click', () => {
+          focusBus(b.bus_id);
+        });
+      }
 
       listHtml += `<div class="bus-item" onclick="focusBus(${b.bus_id})" style="border-left: 4px solid #4CAF50; margin-bottom: 6px; cursor: pointer;">
         ${busPhotoHtml}
@@ -397,102 +468,122 @@ function updateBusMarkers(buses) {
   document.getElementById('tracking-bus-list').innerHTML = listHtml;
 }
 
-function focusBus(busId) {
+async function focusBus(busId) {
   const m = busMarkers[busId];
-  if (m) { tMap.setView(m.getLatLng(), 16); m.openPopup(); }
-}
-
-// ── ROUTE EDITOR ─────────────────────────────────────────────────
-async function loadBusesForEditor() {
-  const res = await api.get('/buses', { per_page: 100 });
-  const buses = res.data?.data ?? [];
-  const sel = document.getElementById('route-bus-select');
-  buses.forEach(b => sel.add(new Option(b.kode_bus + ' — ' + b.plat_nomor, b.id)));
-}
-
-function toggleRouteEditor() {
-  routeEditorActive = !routeEditorActive;
-  document.getElementById('route-editor-panel').style.display = routeEditorActive ? '' : 'none';
-  document.getElementById('btn-route-editor').innerHTML = routeEditorActive
-    ? '<span class="material-icons" style="font-size:14px">close</span> Tutup Editor'
-    : '<span class="material-icons" style="font-size:14px">route</span> Atur Rute';
-}
-
-function onMapClick(e) {
-  if (!routeEditorActive) return;
-  addRoutePoint(e.latlng);
-}
-
-function addRoutePoint(latlng) {
-  routePoints.push([latlng.lat, latlng.lng]);
-  const m = L.circleMarker(latlng, { radius: 6, color: '#1B5E37', fillColor: '#A7C957', fillOpacity: 1, draggable: true })
-    .addTo(tMap);
-  m.on('drag', () => redrawPolyline());
-  m.on('dragend', ev => {
-    const idx = routeMarkers.indexOf(m);
-    if (idx >= 0) routePoints[idx] = [ev.target.getLatLng().lat, ev.target.getLatLng().lng];
-    redrawPolyline();
-  });
-  routeMarkers.push(m);
-  redrawPolyline();
-  document.getElementById('route-points-count').textContent = routePoints.length;
-}
-
-function redrawPolyline() {
-  if (routePolyline) tMap.removeLayer(routePolyline);
-  if (routePoints.length > 1) {
-    routePolyline = L.polyline(routeMarkers.map(m => m.getLatLng()), { color: '#1B5E37', weight: 4, opacity: .8 }).addTo(tMap);
+  if (m) { 
+    tMap.setView(m.getLatLng(), 15); 
+    m.openPopup(); 
   }
-}
 
-function clearRoute() {
-  routePoints = [];
-  routeMarkers.forEach(m => tMap.removeLayer(m)); routeMarkers = [];
-  if (routePolyline) { tMap.removeLayer(routePolyline); routePolyline = null; }
-  document.getElementById('route-points-count').textContent = 0;
-}
+  // Clear rute & halte sebelumnya
+  clearActiveRoute();
 
-async function loadRouteForBus() {
-  const busId = document.getElementById('route-bus-select').value;
-  if (!busId) return;
-  clearRoute();
-  const res = await api.get('/buses/' + busId + '/route');
-  const route = res.data?.data ?? res.data;
-  if (!route) return;
-  document.getElementById('route-name').value = route.nama_rute ?? '';
-  const polylines = route.polylines ?? [];
-  polylines.sort((a,b) => a.urutan - b.urutan).forEach(p => addRoutePoint({lat: p.latitude, lng: p.longitude}));
-}
+  try {
+    const res = await api.get('/buses/' + busId + '/route').catch(() => null);
+    if (!res || !res.ok) return;
 
-async function saveRoute() {
-  const busId = document.getElementById('route-bus-select').value;
-  const name  = document.getElementById('route-name').value;
-  if (!busId || !name) { toast('Pilih bus dan isi nama rute', 'warn'); return; }
-  if (routePoints.length < 2) { toast('Minimal 2 titik rute', 'warn'); return; }
+    const route = res.data?.data ?? res.data;
+    if (!route) return;
 
-  // Get existing route id or create
-  const existing = await api.get('/buses/' + busId + '/route');
-  let routeId = existing.data?.data?.id ?? existing.data?.id;
-  let res;
-  if (routeId) {
-    res = await api.post('/routes/' + routeId + '/sync', {
-      nama_rute: name,
-      polylines: routePoints.map((p, i) => ({ latitude: p[0], longitude: p[1], urutan: i + 1 })),
-      haltes: []
+    // 1. Plot Halte-Halte Bernomor
+    const routeHaltes = (route.haltes ?? []).sort((a, b) => a.urutan - b.urutan);
+    const colors = ['#4CAF50','#F44336','#2196F3','#FF9800','#9C27B0','#00BCD4','#795548','#607D8B'];
+    const haltes = [];
+
+    routeHaltes.forEach((rh, i) => {
+      const h = rh.halte;
+      if (!h || !h.latitude || !h.longitude) return;
+      const latlng = [parseFloat(h.latitude), parseFloat(h.longitude)];
+      haltes.push(h);
+
+      // Marker bulatan halte berwarna
+      const circle = L.circleMarker(latlng, {
+        radius: 12,
+        fillColor: colors[i % colors.length],
+        color: '#fff',
+        weight: 2,
+        fillOpacity: 1
+      }).addTo(tMap).bindPopup(`<b>Halte ${i+1}: ${h.nama_halte}</b><br>${h.alamat || ''}`);
+
+      // Marker teks nomor halte di dalam bulatan
+      const label = L.marker(latlng, {
+        icon: L.divIcon({
+          html: `<div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:10px;font-family:Poppins,sans-serif;margin-top:-2px">${i+1}</div>`,
+          iconSize: [20, 20],
+          className: ''
+        })
+      }).addTo(tMap);
+
+      activeStopMarkers.push(circle);
+      activeStopMarkers.push(label);
     });
-  } else {
-    const createRes = await api.post('/routes', { bus_id: busId, nama_rute: name });
-    routeId = createRes.data?.data?.id ?? createRes.data?.id;
-    if (routeId) {
-      res = await api.post('/routes/' + routeId + '/sync', {
-        nama_rute: name,
-        polylines: routePoints.map((p, i) => ({ latitude: p[0], longitude: p[1], urutan: i + 1 })),
-        haltes: []
-      });
+
+    // 2. Gambar Rute Jalan Raya (OSRM) jika ada 2+ halte
+    if (haltes.length >= 2) {
+      const waypoints = haltes.map(h => `${parseFloat(h.longitude)},${parseFloat(h.latitude)}`).join(';');
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
+
+      try {
+        const resp = await fetch(osrmUrl);
+        const data = await resp.json();
+        if (data.code === 'Ok' && data.routes?.[0]?.geometry) {
+          const rGeo = data.routes[0];
+          const geojsonCoords = rGeo.geometry.coordinates.map(c => [c[1], c[0]]);
+          activeRoutePolyline = L.polyline(geojsonCoords, {
+            color: '#1B5E37',
+            weight: 5,
+            opacity: 0.9,
+            lineJoin: 'round',
+            lineCap: 'round'
+          }).addTo(tMap);
+        } else {
+          // Fallback ke garis lurus antar halte
+          drawFallbackLine(haltes);
+        }
+      } catch (err) {
+        // Fallback ke garis lurus
+        drawFallbackLine(haltes);
+      }
+    } else {
+      // Jika halte < 2, coba pakai database polyline (jika ada)
+      const polyPoints = route.polyline ?? [];
+      if (polyPoints.length >= 2) {
+        const latlngs = polyPoints.sort((a, b) => a.urutan - b.urutan).map(p => [p.latitude, p.longitude]);
+        activeRoutePolyline = L.polyline(latlngs, {
+          color: '#1B5E37',
+          weight: 5,
+          opacity: 0.85,
+          lineJoin: 'round',
+          lineCap: 'round'
+        }).addTo(tMap);
+      }
     }
+
+    // Sesuaikan kamera agar menampilkan seluruh rute secara pas
+    if (activeRoutePolyline) {
+      tMap.fitBounds(activeRoutePolyline.getBounds(), { padding: [50, 50] });
+    } else if (haltes.length > 0) {
+      const coords = haltes.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
+      tMap.fitBounds(L.latLngBounds(coords), { padding: [50, 50] });
+    }
+  } catch (err) {
+    console.error('Gagal mengambil data rute bus:', err);
   }
-  res?.ok ? toast('Rute berhasil disimpan') : toast(res?.data?.message ?? 'Gagal simpan rute', 'error');
 }
+
+function drawFallbackLine(haltes) {
+  const coords = haltes.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
+  activeRoutePolyline = L.polyline(coords, {
+    color: '#1B5E37',
+    weight: 4.5,
+    opacity: 0.75,
+    dashArray: '8,5',
+    lineJoin: 'round',
+    lineCap: 'round'
+  }).addTo(tMap);
+}
+
+
 
 
 </script>

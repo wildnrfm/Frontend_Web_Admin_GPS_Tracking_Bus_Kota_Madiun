@@ -680,6 +680,75 @@
   border: 1px solid var(--c-border, #dde6e0) !important;
 }
 
+/* ── Custom Pin Map Bus Marker ── */
+.map-bus-marker {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  filter: drop-shadow(0 4px 10px rgba(15, 61, 34, 0.25));
+}
+.map-bus-marker-pulse {
+  position: absolute;
+  top: -2px; left: -2px;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--c-primary, #1B5E37);
+  animation: markerPulse 1.8s infinite ease-out;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes markerPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.map-bus-marker-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--c-primary, #1B5E37);
+  background: var(--c-primary-light, #E8F5ED);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.map-bus-marker-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.map-bus-marker-fallback {
+  font-size: 20px;
+  line-height: 1;
+}
+.map-bus-marker-label {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--c-primary-dark, #0F3D22);
+  color: #fff;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  white-space: nowrap;
+  border: 1.5px solid #fff;
+}
+.map-bus-marker-arrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--c-primary, #1B5E37);
+  z-index: 2;
+}
+
 /* ── Desktop Layout Media Queries ── */
 @media (min-width: 768px) {
   .db-hero-card {
@@ -796,9 +865,24 @@ function processGpsData(buses) {
     if (markers[b.bus_id]) {
       markers[b.bus_id].setLatLng(latLng);
     } else {
+      const markerHtml = `
+        <div class="map-bus-marker">
+          <div class="map-bus-marker-pulse"></div>
+          <div class="map-bus-marker-avatar">
+            ${b.photo_url 
+              ? `<img src="${proxyImgUrl(b.photo_url)}" class="map-bus-marker-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">` 
+              : ''}
+            <span class="map-bus-marker-fallback" style="${b.photo_url ? 'display:none' : ''}">🚌</span>
+          </div>
+          <div class="map-bus-marker-label">${b.bus_code ?? markerIdx}</div>
+          <div class="map-bus-marker-arrow"></div>
+        </div>
+      `;
       const icon = L.divIcon({
-        html: `<div style="background:var(--c-primary);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.35)">${markerIdx}</div>`,
-        iconSize:[30,30], iconAnchor:[15,15], className:''
+        html: markerHtml,
+        iconSize: [44, 48],
+        iconAnchor: [22, 48],
+        className: ''
       });
       markers[b.bus_id] = L.marker(latLng, {icon}).addTo(map)
         .bindPopup(`<b>${b.bus_code ?? '—'}</b><br>${b.driver_name ?? b.driver?.name ?? ''}`);
